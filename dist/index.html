@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Crowndfounding on Near</title>
+    <link href="/bootstrap.8fed14c2.css" type="text/css" rel="stylesheet">
+
+    <style>.bd-placeholder-img {
+            font-size: 1.125rem;
+            text-anchor: middle;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+
+        @media (min-width: 768px) {
+            .bd-placeholder-img-lg {
+                font-size: 3.5rem;
+            }
+        }</style>
+    <link href="/modals.a49a3a1b.css" type="text/css" rel="stylesheet">
+<script src="/bootstrap.8fed14c2.js"></script><script src="/modals.a49a3a1b.js"></script></head>
+<body>
+
+<header class="p-3 bg-dark text-white">
+    <div class="container">
+        <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+            <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none">
+                <svg class="bi me-2" width="40" height="32" role="img" aria-label="Bootstrap"><use xlink:href="#bootstrap"></use></svg>
+            </a>
+
+            <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                <li><a href="#" class="nav-link px-2 text-secondary">Commertial</a></li>
+                <li><a href="#" class="nav-link px-2 text-white">NonProfit</a></li>
+                <li><a href="#" class="nav-link px-2 text-white">Pricing</a></li>
+                <li><a href="#" class="nav-link px-2 text-white">FAQs</a></li>
+                <li><a href="#" class="nav-link px-2 text-white">About</a></li>
+                <li><a href="#" id="create_project_modal" class="nav-link px-2 text-white">Create Project</a> </li>
+            </ul>
+
+            <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-lg-3">
+                <input type="search" class="form-control form-control-dark" placeholder="Search..." aria-label="Search">
+            </form>
+            <a id="account_id" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none signed-out"></a>
+            <div class="text-end">
+                <button type="button" id="sign-in" class="btn btn-outline-light me-2 signed-in">Login with NEAR</button>
+
+                <button type="button" id="sign-out" class="btn btn-outline-light me-2 signed-out">Sign out from NEAR</button>
+            </div>
+        </div>
+    </div>
+</header>
+
+
+
+<main>
+
+    <section class="py-5 text-center container">
+        <div class="row py-lg-5">
+            <div class="col-lg-6 col-md-8 mx-auto">
+                <h1 class="fw-light">Album example</h1>
+                <p class="lead text-muted">Something short and leading about the collection below—its contents, the creator, etc. Make it short and sweet, but not too short so folks don’t simply skip over it entirely.</p>
+                <p>
+                    <a href="#" class="btn btn-primary my-2">Main call to action</a>
+                    <a href="#" class="btn btn-secondary my-2">Secondary action</a>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <div class="album py-5 bg-light">
+        <div class="container">
+
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+
+
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"></rect><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
+
+                        <div class="card-body">
+                            <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                                </div>
+                                <small class="text-muted">9 mins</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<!---------------------------------------------MODALS---------------------------------------------------->
+
+<div id="create_pro" class="modal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content rounded-5 shadow">
+            <div class="modal-header p-5 pb-4 border-bottom-0">
+                <!-- <h5 class="modal-title">Modal title</h5> -->
+                <h2 class="fw-bold mb-0">Create project</h2>
+                <button type="button" id="btn-close-pro-create" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-5 pt-0">
+                <form class="">
+                    <div class="form-floating mb-3">
+                        <input id="pro_name" type="text" class="form-control rounded-4" placeholder="Example Project">
+                        <label for="floatingName">Project name</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions1" id="inlineRadio1_1" value="Commertial" checked="">
+                            <label class="form-check-label" for="inlineRadio1_1">Commertial</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions1" id="inlineRadio1_2" value="non_profit">
+                            <label class="form-check-label" for="inlineRadio1_2">Non Profit</label>
+                        </div>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <textarea type="text" class="form-control rounded-4" id="floatingShortInfo" maxlength="500" placeholder="Short info" style="height:150px;"></textarea>
+                        <label for="floatingShortInfo">Short info</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions2" id="inlineRadio2_1" value="option1" checked="">
+                            <label class="form-check-label" for="inlineRadio2_1">Full time founding</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions2" id="inlineRadio2_2" value="option2">
+                            <label class="form-check-label" for="inlineRadio2_2">Summ founding</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <form enctype="multipart/form-data" method="post">
+                        <label for="formFile" class="form-label">Project images</label>
+                        <div id="img_add" class="mb-1">
+                            <input class="form-control" name="image" type="file" accept="image/png, image/gif, image/jpeg" id="formFile">
+                        </div>
+                        <button type="button" id="remove_img_btn" class="btn btn-warning btn-sm" style="width: 100%; display: none">Remove images</button>
+                        <button type="button" id="add_img_btn" class="btn btn-secondary btn-sm" style="width: 100%">Add more images</button>
+                        </form>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input class="form-control rounded-4" type="url" pattern="https://.*" placeholder="https://youtube.com/" id="formVideoURL">
+                        <label for="formVideoURL" class="form-label">Project video URL (Youtube)</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input class="form-control rounded-4" type="text" id="Project_tags" placeholder="Project tags">
+                        <label for="Project_tags" class="form-label">Project tags</label>
+                    </div>
+
+                        <label for="Near_amount" class="form-label">Amount on Near</label>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text">$NEAR</span>
+                            <input id="Near_amount" type="number" class="form-control rounded-4" aria-label="Amount (on Near)">
+                        </div>
+
+                        <label for="dolar_amount" class="form-label">About amount on USD (current currency rate)</label>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text">$</span>
+                            <input type="number" id="dolar_amount" class="form-control rounded-4" aria-label="About amount on USD (current currency rate)">
+
+                        </div>
+                    <hr class="my-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" id="premium_check" type="checkbox">
+                        <label class="form-check-label" for="buyPremium">Buy premium for project (20 $Near)</label>
+                    </div>
+                    <hr class="my-4">
+                    <h2>NFT-base bonuses creation</h2>
+                    <div id="NFT_create_place"></div>
+                    <div>
+                        <button type="button" id="remove-nft_button" class="remove_btn w-100 mb-3 btn btn-lg rounded-4 btn-danger" style="display: none">Remove</button>
+                    </div>
+                    <button id="add_nft_button" class="w-100 mb-2 btn btn-lg rounded-4 btn-secondary" type="button">Add NFT</button>
+                    <hr class="my-4">
+                    <button id="create_btn" class="w-100 mb-2 btn btn-lg rounded-4 btn-primary" type="submit">Create Project</button>
+                    <small class="text-muted">By clicking Create Project, you agree to the terms of use.</small>
+                    <hr class="my-4">
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    <div class="modal" style="display: none" role="dialog" id="modalSignIn">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content rounded-5 shadow">
+                <div class="modal-header p-5 pb-4 border-bottom-0">
+                    <!-- <h5 class="modal-title">Modal title</h5> -->
+                    <h2 class="fw-bold mb-0">Sign in with Near</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-5 pt-0">
+                      <button class="w-100 mb-2 btn btn-lg rounded-4 btn-primary" id="sign_in_btn_modal" type="submit">Sign in with Near</button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<footer class="text-muted py-5">
+    <div class="container">
+        <p class="float-end mb-1">
+            <a href="#">Back to top</a>
+        </p>
+        <p class="mb-1">Album example is &copy; Bootstrap, but please download and customize it for yourself!</p>
+
+    </div>
+</footer>
+
+<script src="/main_page.e1502dd6.js"></script>
+<script src="/near-work.b2ab8f8c.js"></script>
+<script src="/bootstrap.bundle.min.b066ac09.js"></script>
+
+
+</body>
+
+<!----------------------------------------TEMPLATES------------------------------------------------------------------->
+<template id="create_nft_template">
+   <div id="create_nft_div" class="div_create_nft">
+    <h3 id="nft_number">test</h3>
+    <div class="form-floating mb-3">
+        <input type="text" class="form-control rounded-4" name="nftName_create" id="nftName" placeholder="Example name">
+        <label for="nftName">Bonus Name</label>
+    </div>
+    <div class="mb-3">
+        <form enctype="multipart/form-data" method="post">
+        <label for="form_img_nft" class="form-label">NFT image</label>
+        <input class="form-control" name="img_nft_create" type="file" accept="image/png, image/gif, image/jpeg" id="form_img_nft">
+        </form>
+    </div>
+    <div class="form-floating mb-3">
+        <textarea type="text" class="form-control rounded-4" name="short_info_nft_create" id="nftShortInfo" maxlength="500" placeholder="Short info" style="height:150px;"></textarea>
+        <label for="nftShortInfo">NFT Short info</label>
+    </div>
+    <label for="Near_NFT_price" class="form-label">Amount on Near</label>
+    <div class="input-group mb-3">
+        <span class="input-group-text">$NEAR</span>
+        <input id="Near_NFT_price" name="nft_price_create" type="number" class="form-control rounded-4" aria-label="Amount (on Near)">
+    </div>
+
+    <label for="dolar_NFT_price" class="form-label">About amount on USD (current currency rate)</label>
+    <div class="input-group mb-3">
+        <span class="input-group-text">$</span>
+        <input type="number" id="dolar_NFT_price" class="form-control rounded-4" aria-label="About amount on USD (current currency rate)">
+    </div>
+
+     <hr class="my-4">
+   </div>
+</template>
+
+<template id="img_form">
+    <input class="form-control" name="image" type="file" accept="image/png, image/gif, image/jpeg">
+</template>
+
+<template id="project_cart">
+    <div class="col">
+        <div class="card shadow-sm">
+            <div id="carouselIndicators" width="100%" height="225" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-indicators">
+                    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                </div>
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <img src="" class="d-block w-100" alt="...">
+                    </div>
+                    <div class="carousel-item">
+                        <img src="" class="d-block w-100" alt="...">
+                    </div>
+                    <div class="carousel-item">
+                        <img src="" class="d-block w-100" alt="...">
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+
+            <div class="card-body">
+                <p class="card-text">text</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">25%</div>
+                    </div>
+                    <small class="text-muted">9 mins</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+</html>
