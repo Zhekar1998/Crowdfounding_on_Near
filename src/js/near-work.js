@@ -116,30 +116,13 @@ async function get_projects() {
 
 
 var premium_payment = utils.format.parseNearAmount("20");
-async function add_donation(amount, type_found, name, short_info, image_masive, video, type_pro, tags, nft_number, nftName, nftPrice, nft_image_array, NFT_Short_info, id_number){
+async function add_donation(amount, type_found, name, file_cid){
     console.log(inspect({
         "amount": amount,
         "receiver": window.accountId,
         "type_found_param": type_found,
-        "metadata": {
-            "name": name,
-            "short_info": short_info,
-            "image": image_masive,
-            "video": video,
-            "type_pro": type_pro,
-            "project_tags": tags,
+        "data_path_var": file_cid
 
-
-        },
-        "nft_data": {
-            "nft_number": nft_number,
-            "name": nftName,
-            "img": nft_image_array,
-            "price": nftPrice, //in $NEAR
-            "short_info": NFT_Short_info,
-            "id_number": id_number
-
-        }
     }));
     if (document.getElementById("premium_check").checked) {
         const account = await window.walletAccount.account();
@@ -151,24 +134,8 @@ async function add_donation(amount, type_found, name, short_info, image_masive, 
                     "amount": amount,
                     "receiver": window.accountId,
                     "type_found_param": type_found,
-                    "metadata": {
-                        "name": name,
-                        "short_info": short_info,
-                        "image": image_masive,
-                        "video": video,
-                        "type_pro": type_pro,
-                        "project_tags": tags,
+                    "data_path_var": file_cid
 
-
-                    },
-                    "nft_data": {
-                        "nft_number": nft_number,
-                        "name": nftName,
-                        "img": nft_image_array,
-                        "price": nftPrice, //in $NEAR
-                        "short_info": NFT_Short_info,
-                        "id_number": id_number
-                    }
                 },
                 300000000000000,
                 premium_payment
@@ -182,25 +149,7 @@ async function add_donation(amount, type_found, name, short_info, image_masive, 
                 "amount": amount,
                 "receiver": window.accountId,
                 "type_found_param": type_found,
-                "metadata": {
-                    "name": name,
-                    "short_info": short_info,
-                    "image": image_masive,
-                    "video": video,
-                    "type_pro": type_pro,
-                    "project_tags": tags,
-
-
-                },
-                "nft_data": {
-                    "nft_number": nft_number,
-                    "name": nftName,
-                    "img": nft_image_array,
-                    "price": nftPrice, //in $NEAR
-                    "short_info": NFT_Short_info,
-                    "id_number": id_number
-
-                }
+                "data_path_var": file_cid
             }
 
         )
@@ -256,7 +205,32 @@ document.getElementById("create_btn").onclick = async () =>{
         nft_image_array = await load_to_nft_storage(el1);
     }
 
-    await add_donation(amount, type_found, name, short_info, image_array,video,type_pro,tags,nft_number,nftName,nftPrice, nft_image_array,NFT_Short_info,id_number)
+    var pro_data_create = {
+        "metadata": {
+            "name": name,
+            "short_info": short_info,
+            "image": image_array,
+            "video": video,
+            "type_pro": type_pro,
+            "project_tags": tags,
+
+
+        },
+        "nft_data": {
+            "nft_number": nft_number,
+            "name": nftName,
+            "img": nft_image_array,
+            "price": nftPrice, //in $NEAR
+            "short_info": NFT_Short_info,
+            "id_number": id_number
+        }
+    }
+
+    const blob = new Blob([JSON.stringify(pro_data_create)], {type: 'application/json'});
+    const files = [new File([blob], name+'.json')];
+    let file_cid = await storeFiles(files);
+
+    await add_donation(amount, type_found, name, file_cid);
 }
 
 

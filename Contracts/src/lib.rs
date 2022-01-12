@@ -34,10 +34,9 @@ pub struct DonationItem {
     donated: u128,
     receiver: String,
     create_time: u64,
-    type_found: bool,   //true for full-time project, false for amount-based projects
-    metadata: LazyOption<Metadata>,
-    status: String,
-    nft_bonuse: NftData,
+    type_found: bool,
+    status: u8, //1-- base, 2-- premium, 3 association
+    data_path: String,
     donate_base: Vec<DonateBase>
 }
 
@@ -49,45 +48,18 @@ pub struct DonateBase {
   //  nft_id: String
 }
 
-#[derive(Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
-#[serde(crate = "near_sdk::serde")]
-pub struct Metadata {
-    name: String,
-    short_info: String,
-    image: Vec<String>,
-    video: String,
-    type_pro: bool, //true for commertial false for non-profit
-    project_tags: String,
-}
-
-
-
-
-#[derive(Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
-#[serde(crate = "near_sdk::serde")]
-
-pub struct NftData {
-    nft_number: u16,
-    name: Vec<String>,
-    img: Vec<String>,
-    price: Vec<u128>,
-    short_info: Vec<String>,
-    id_number: Vec<u64>
-}
-
-
 #[derive(
     Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize, PanicOnDefault,
 )]
 #[serde(crate = "near_sdk::serde")]
 pub struct DonationItemView {
-    amount: String,
-    donated: String,
+    amount: u128,
+    donated: u128,
     receiver: String,
     time_past: u64,
-    metadata: Metadata,
-    status: String,
-    nft_bonuse: NftData,
+   data_path: String,
+    status: u8,
+
 }
 #[derive(
 Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize, PanicOnDefault,
@@ -113,10 +85,10 @@ impl Donation {
         this
     }
     #[payable]
-    pub fn add_donation(&mut self, amount: u128, receiver: String, type_found_param: bool, metadata: Metadata, nft_data: NftData) -> bool {
-        let status_var: String;
+    pub fn add_donation(&mut self, amount: u128, receiver: String, type_found_param: bool, data_path_var: String ) -> bool {
+        let status_var: u8;
         if env::attached_deposit()>=10u128.pow(24) {
-            status_var = String::from("premium");
+            status_var = 2;
         }else {
            let mut assoc: bool = false;
              self.association.iter_mut().for_each(|el|{
@@ -124,7 +96,7 @@ impl Donation {
                        assoc = true;
                     }
             });
-                if assoc {status_var = String::from("association"); }else {status_var = String::from("standart");}
+                if assoc {status_var = 3; }else {status_var = 1;}
         }
 
         self.donations.push(DonationItem {
@@ -134,8 +106,7 @@ impl Donation {
             create_time: env::block_timestamp(),
             type_found: type_found_param,
             status: status_var,
-            metadata: LazyOption::new(b"m", Some(&metadata)),
-            nft_bonuse: nft_data,
+            data_path: data_path_var,
             donate_base: Vec::new()
         });
         true
@@ -158,7 +129,7 @@ impl Donation {
                 el.donate_base.push(DonateBase{
                     donator_id: env::signer_account_id(),
                     donate_near:    env::attached_deposit(),
-                    //nft_id:               //TODO add NFT_ID.
+                   // nft_id:               //TODO add NFT_ID.
                 })
             }
 
@@ -200,9 +171,8 @@ impl Donation {
                 donated: el.donated.to_string(),
                 receiver: el.receiver.clone(),
                 time_past: 2592000000000000-env::block_timestamp()-el.create_time,
-                metadata: el.metadata.get().unwrap(),
                 status: String,
-                nft_bonuse: nft_data
+                data_path: String
             })
             .collect()
     }
