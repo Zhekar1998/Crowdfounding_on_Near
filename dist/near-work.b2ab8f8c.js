@@ -17336,13 +17336,44 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 
 function addProjectList() {}
 
+var NEAR_exchange_data;
+
+function error() {
+  console.error("data not find");
+}
+
+function NEAR_exchange(Data) {
+  // Output only the details on the first post
+  console.log(Data);
+  NEAR_exchange_data = Data; // output the details of first three posts
+  // output the id field of first five elements.
+}
+
 document.getElementById("create_project_modal").onclick = function () {
   if (window.walletAccount.isSignedIn()) {
     document.getElementById("create_pro").style.display = "block";
+    loadJSON("https://helper.mainnet.near.org/fiat", NEAR_exchange, error);
   } else {
     document.getElementById("modalSignIn").style.display = "block";
   }
 };
+
+function loadJSON(path, success, error) {
+  var xhr = new XMLHttpRequest();
+
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        success(JSON.parse(xhr.responseText));
+      } else {
+        error(xhr);
+      }
+    }
+  };
+
+  xhr.open('GET', path, true);
+  xhr.send();
+}
 
 document.getElementById("sign_in_btn_modal").onclick = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
   return regeneratorRuntime.wrap(function _callee$(_context) {
@@ -17356,6 +17387,7 @@ document.getElementById("sign_in_btn_modal").onclick = /*#__PURE__*/_asyncToGene
           if (window.walletAccount.isSignedIn()) {
             document.getElementById("modalSignin").style.display = "none";
             document.getElementById("create_pro").style.display = "block";
+            loadJSON("https://helper.mainnet.near.org/fiat", NEAR_exchange, error);
           }
 
         case 3:
@@ -17385,6 +17417,8 @@ document.getElementById("add_img_btn").onclick = function () {
   }
 };
 
+document.getElementById("floatingShortInfo").onchange = function () {};
+
 document.getElementById("remove_img_btn").onclick = function () {
   var div_list = document.getElementsByName("image");
   var div_bonus_remove = div_list[div_list.length - 1];
@@ -17411,6 +17445,43 @@ document.getElementById("add_nft_button").onclick = function () {
     input_place.appendChild(clone);
   }
 };
+
+document.getElementById("Near_amount").onkeyup = function () {
+  document.getElementById("dolar_amount").value = document.getElementById("Near_amount").value * NEAR_exchange_data.near.usd;
+};
+
+document.getElementById("dolar_amount").onkeyup = function () {
+  document.getElementById("Near_amount").value = document.getElementById("dolar_amount").value / NEAR_exchange_data.near.usd;
+};
+/*window.document.onload = function () {
+    let i =0;
+    document.getElementsByName("dolar_NFT_price").forEach((el)=>{
+        el.onkeyup = function () {
+            document.getElementsByName("nft_price_create")[i].value = el.value/NEAR_exchange_data.near.usd;
+        }
+        i++;
+    })
+    i=0
+    document.getElementsByName("nft_price_create").forEach((el)=>{
+        el.onkeyup = function () {
+            document.getElementsByName("dolar_NFT_price")[i].value = el.value*NEAR_exchange_data.near.usd;
+        }
+        i++;
+    })
+}*/
+
+
+function near_to_dollar() {
+  for (var i = 0; i < document.getElementsByName("dolar_NFT_price").length; i++) {
+    document.getElementsByName("dolar_NFT_price")[i].value = document.getElementsByName("nft_price_create")[i].value * NEAR_exchange_data.near.usd;
+  }
+}
+
+function dollar_to_near() {
+  for (var i = 0; i < document.getElementsByName("dolar_NFT_price").length; i++) {
+    document.getElementsByName("nft_price_create")[i].value = document.getElementsByName("dolar_NFT_price")[i].value / NEAR_exchange_data.near.usd;
+  }
+}
 
 document.getElementById("remove-nft_button").onclick = function () {
   var div_list = document.getElementsByClassName("div_create_nft");
@@ -42933,12 +43004,12 @@ function _get_projects() {
 
 var premium_payment = nearAPI.utils.format.parseNearAmount("20");
 
-function add_donation(_x2, _x3, _x4, _x5, _x6, _x7, _x8, _x9, _x10, _x11, _x12, _x13, _x14, _x15) {
+function add_donation(_x2, _x3, _x4, _x5) {
   return _add_donation.apply(this, arguments);
 }
 
 function _add_donation() {
-  _add_donation = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(amount, type_found, name, short_info, image_masive, video, type_pro, tags, nft_number, nftName, nftPrice, nft_image_array, NFT_Short_info, id_number) {
+  _add_donation = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(amount, type_found, name, file_cid) {
     var account, balance;
     return regeneratorRuntime.wrap(function _callee7$(_context7) {
       while (1) {
@@ -42948,23 +43019,7 @@ function _add_donation() {
               "amount": amount,
               "receiver": window.accountId,
               "type_found_param": type_found,
-              "metadata": {
-                "name": name,
-                "short_info": short_info,
-                "image": image_masive,
-                "video": video,
-                "type_pro": type_pro,
-                "project_tags": tags
-              },
-              "nft_data": {
-                "nft_number": nft_number,
-                "name": nftName,
-                "img": nft_image_array,
-                "price": nftPrice,
-                //in $NEAR
-                "short_info": NFT_Short_info,
-                "id_number": id_number
-              }
+              "data_path_var": file_cid
             }));
 
             if (!document.getElementById("premium_check").checked) {
@@ -42993,23 +43048,7 @@ function _add_donation() {
               "amount": amount,
               "receiver": window.accountId,
               "type_found_param": type_found,
-              "metadata": {
-                "name": name,
-                "short_info": short_info,
-                "image": image_masive,
-                "video": video,
-                "type_pro": type_pro,
-                "project_tags": tags
-              },
-              "nft_data": {
-                "nft_number": nft_number,
-                "name": nftName,
-                "img": nft_image_array,
-                "price": nftPrice,
-                //in $NEAR
-                "short_info": NFT_Short_info,
-                "id_number": id_number
-              }
+              "data_path_var": file_cid
             }, 300000000000000, premium_payment);
 
           case 11:
@@ -43026,23 +43065,7 @@ function _add_donation() {
               "amount": amount,
               "receiver": window.accountId,
               "type_found_param": type_found,
-              "metadata": {
-                "name": name,
-                "short_info": short_info,
-                "image": image_masive,
-                "video": video,
-                "type_pro": type_pro,
-                "project_tags": tags
-              },
-              "nft_data": {
-                "nft_number": nft_number,
-                "name": nftName,
-                "img": nft_image_array,
-                "price": nftPrice,
-                //in $NEAR
-                "short_info": NFT_Short_info,
-                "id_number": id_number
-              }
+              "data_path_var": file_cid
             });
 
           case 17:
@@ -43059,7 +43082,7 @@ var type_found, name, short_info, image_array, video, type_pro, tags, nft_number
 var amount;
 var nft_image_array = [];
 document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
-  var image, nftName, nftPrice, NFT_Short_info, id_number, el, el1, el2, el3, i;
+  var image, nftName, nftPrice, NFT_Short_info, id_number, el, el1, el2, el3, i, pro_data_create, blob, files, file_cid;
   return regeneratorRuntime.wrap(function _callee$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
@@ -43121,10 +43144,38 @@ document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( 
           nft_image_array = _context.sent;
 
         case 27:
-          _context.next = 29;
-          return add_donation(amount, type_found, name, short_info, image_array, video, type_pro, tags, nft_number, nftName, nftPrice, nft_image_array, NFT_Short_info, id_number);
+          pro_data_create = {
+            "metadata": {
+              "name": name,
+              "short_info": short_info,
+              "image": image_array,
+              "video": video,
+              "type_pro": type_pro,
+              "project_tags": tags
+            },
+            "nft_data": {
+              "nft_number": nft_number,
+              "name": nftName,
+              "img": nft_image_array,
+              "price": nftPrice,
+              //in $NEAR
+              "short_info": NFT_Short_info,
+              "id_number": id_number
+            }
+          };
+          blob = new Blob([JSON.stringify(pro_data_create)], {
+            type: 'application/json'
+          });
+          files = [new File([blob], name + '.json')];
+          _context.next = 32;
+          return storeFiles(files);
 
-        case 29:
+        case 32:
+          file_cid = _context.sent;
+          _context.next = 35;
+          return add_donation(amount, type_found, name, file_cid);
+
+        case 35:
         case "end":
           return _context.stop();
       }
@@ -43132,7 +43183,7 @@ document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( 
   }, _callee);
 }));
 
-function load_to_nft_storage(_x16) {
+function load_to_nft_storage(_x6) {
   return _load_to_nft_storage.apply(this, arguments);
 }
 
@@ -43207,7 +43258,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "40393" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "46679" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

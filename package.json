@@ -1,9 +1,9 @@
 {
-  "name": "Crowndfounding-On-Near",
+  "name": "crowndfounding-on-near",
   "description": "on_test",
   "version": "0.0.1",
   "scripts": {
-    "dev:deploy:contract": "near deploy crowndfound.testnet --wasmFile=\"./Contracts/target/wasm32-unknown-unknown/release/Crowndfounding_on_NEAR.wasm\" && near call crowndfound.testnet new --accountId crowndfound.testnet && echo \"# This file used by parcel\nCONTRACT_NAME=$(cat neardev/dev-account)\nWEB3STORAGE_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweEM3MDQ0ZjcyRkExYTQzMmZiRjE1ZUE2MkIyNTc2MzlCRjQ0NUY5QUQiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NDE1NjM3Nzg1MzUsIm5hbWUiOiIxIn0.l33kUNtDs5irZj40uCh2WHoUgCl31T9WSbSSkbxV1_I\" > .env.local",
+    "dev:deploy:contract": "near deploy crowndfound.testnet --wasmFile=\"./Contracts/target/wasm32-unknown-unknown/release/crowndfounding_on_near.wasm\" && near call crowndfound.testnet new --accountId crowndfound.testnet && echo \"# This file used by parcel\nCONTRACT_NAME=$(cat neardev/dev-account)\nWEB3STORAGE_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweEM3MDQ0ZjcyRkExYTQzMmZiRjE1ZUE2MkIyNTc2MzlCRjQ0NUY5QUQiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NDE1NjM3Nzg1MzUsIm5hbWUiOiIxIn0.l33kUNtDs5irZj40uCh2WHoUgCl31T9WSbSSkbxV1_I\" > .env.local",
     "deploy:contract": "near deploy && rm -f .env.local",
     "deploy": "yarn deploy:contract",
     "prestart": "yarn build && yarn deploy:contract",
@@ -20,6 +20,8 @@
   },
   "dependencies": {
     "@popperjs/core": "^2.11.2",
+    "babel-cli": "^6.26.0",
+    "babel-preset-react-app": "^3.1.2",
     "browser-util-inspect": "^0.2.0",
     "ipfs-car": "^0.6.1",
     "log-to-file": "^3.0.0",
@@ -32,5 +34,17 @@
     "testPathIgnorePatterns": [
       "<rootDir>/node_modules/"
     ]
-  }
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zhekar1998/Crowdfounding_on_Near.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Zhekar1998/Crowdfounding_on_Near/issues"
+  },
+  "homepage": "https://github.com/Zhekar1998/Crowdfounding_on_Near#readme"
 }

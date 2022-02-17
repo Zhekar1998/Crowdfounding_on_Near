@@ -3,13 +3,47 @@ import "./near-work"
 function addProjectList() {
 
 }
+var NEAR_exchange_data;
+
+function error(){
+    console.error("data not find");
+}
+function NEAR_exchange(Data)
+{
+
+    // Output only the details on the first post
+    console.log(Data);
+    NEAR_exchange_data=Data;
+    // output the details of first three posts
+
+    // output the id field of first five elements.
+
+}
 
 document.getElementById("create_project_modal").onclick = function(){
     if(window.walletAccount.isSignedIn()) {
         document.getElementById("create_pro").style.display = "block";
+        loadJSON("https://helper.mainnet.near.org/fiat", NEAR_exchange, error);
+
     }else{
         document.getElementById("modalSignIn").style.display = "block";
     }
+}
+
+function loadJSON(path, success, error) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                success(JSON.parse(xhr.responseText));
+            }
+            else {
+                error(xhr);
+            }
+        }
+    };
+    xhr.open('GET', path, true);
+    xhr.send();
 }
 
 document.getElementById("sign_in_btn_modal").onclick = async ()=> {
@@ -18,6 +52,7 @@ document.getElementById("sign_in_btn_modal").onclick = async ()=> {
     if(window.walletAccount.isSignedIn()) {
         document.getElementById("modalSignin").style.display = "none";
         document.getElementById("create_pro").style.display = "block";
+        loadJSON("https://helper.mainnet.near.org/fiat", NEAR_exchange, error);
     }
 }
 document.getElementById("btn-close-pro-create").onclick = function () {
@@ -81,6 +116,41 @@ document.getElementById("add_nft_button").onclick = function(){
     }
 }
 
+document.getElementById("Near_amount").onkeyup = function () {
+    document.getElementById("dolar_amount").value = document.getElementById("Near_amount").value*NEAR_exchange_data.near.usd;
+}
+
+document.getElementById("dolar_amount").onkeyup = function () {
+    document.getElementById("Near_amount").value = document.getElementById("dolar_amount").value/NEAR_exchange_data.near.usd;
+}
+
+/*window.document.onload = function () {
+    let i =0;
+    document.getElementsByName("dolar_NFT_price").forEach((el)=>{
+        el.onkeyup = function () {
+            document.getElementsByName("nft_price_create")[i].value = el.value/NEAR_exchange_data.near.usd;
+        }
+        i++;
+    })
+    i=0
+    document.getElementsByName("nft_price_create").forEach((el)=>{
+        el.onkeyup = function () {
+            document.getElementsByName("dolar_NFT_price")[i].value = el.value*NEAR_exchange_data.near.usd;
+        }
+        i++;
+    })
+}*/
+
+function near_to_dollar(){
+    for (let i = 0; i<document.getElementsByName("dolar_NFT_price").length; i++) {
+        document.getElementsByName("dolar_NFT_price")[i].value = document.getElementsByName("nft_price_create")[i].value * NEAR_exchange_data.near.usd;
+    }
+}
+function dollar_to_near() {
+    for (let i = 0; i < document.getElementsByName("dolar_NFT_price").length; i++) {
+        document.getElementsByName("nft_price_create")[i].value = document.getElementsByName("dolar_NFT_price")[i].value/NEAR_exchange_data.near.usd;
+    }
+}
 document.getElementById("remove-nft_button").onclick = function(){
     var div_list = document.getElementsByClassName("div_create_nft");
 

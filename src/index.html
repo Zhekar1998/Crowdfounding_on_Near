@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <title>Crowndfounding on Near</title>
     <link href="../css/bootstrap.css" type="text/css" rel="stylesheet">
-
+    <script src="./js/main_page.js"></script>
+    <script src="./js/near-work.js"></script>
+    <script src="../js/bootstrap.bundle.min.js"></script>
     <style>
         .bd-placeholder-img {
             font-size: 1.125rem;
@@ -71,12 +73,12 @@
     </section>
 
     <div class="album py-5 bg-light">
-        <div class="container">
+        <div class="container" id="container">
 
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
 
 
-                <div class="col">
+                <div class="col" id="col">
                     <div class="card shadow-sm">
                         <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"/><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
 
@@ -225,42 +227,37 @@
 <script src="./js/main_page.js"></script>
 <script src="./js/near-work.js"></script>
 <script src="../js/bootstrap.bundle.min.js"></script>
-
-
+<script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+<script src="./js/cards.js"></script>
 </body>
 
 <!----------------------------------------TEMPLATES------------------------------------------------------------------->
 <template id="create_nft_template">
-   <div id="create_nft_div" class="div_create_nft">
-    <h3 id="nft_number">test</h3>
-    <div class="form-floating mb-3">
-        <input type="text" class="form-control rounded-4" name="nftName_create" id="nftName" placeholder="Example name">
-        <label for="nftName">Bonus Name</label>
+    <script src="./js/near-work.js"></script>
+    <div id="create_nft_div" class="div_create_nft">
+        <h3 id="nft_number">test</h3>
+        <div class="form-floating mb-3">
+            <input type="text" class="form-control rounded-4" name="nftName_create" id="nftName" placeholder="Example name">
+            <label for="nftName">Bonus Name</label>
+        </div>
+        <div class="mb-3">
+            <form enctype="multipart/form-data" method="post">
+                <label for="form_img_nft" class="form-label">NFT image</label>
+                <input class="form-control" name="img_nft_create" type="file" accept="image/png, image/gif, image/jpeg"  id="form_img_nft">
+            </form>
+        </div>
+        <div class="form-floating mb-3">
+            <textarea type="text" class="form-control rounded-4" name="short_info_nft_create" id="nftShortInfo" maxlength="500" placeholder="Short info" style="height:150px;"></textarea>
+            <label for="nftShortInfo">NFT Short info</label>
+        </div>
+        <label for="Near_NFT_price" class="form-label" >Amount on Near</label>
+        <div class="input-group mb-3">
+            <span class="input-group-text">$NEAR</span>
+            <input id="Near_NFT_price" name="nft_price_create" type="number" class="form-control rounded-4 nft_price_create" onkeyup="near_to_dollar" aria-label="Amount (on Near)">
+        </div>
+        <hr class="my-4">
     </div>
-    <div class="mb-3">
-        <form enctype="multipart/form-data" method="post">
-        <label for="form_img_nft" class="form-label">NFT image</label>
-        <input class="form-control" name="img_nft_create" type="file" accept="image/png, image/gif, image/jpeg"  id="form_img_nft">
-        </form>
-    </div>
-    <div class="form-floating mb-3">
-        <textarea type="text" class="form-control rounded-4" name="short_info_nft_create" id="nftShortInfo" maxlength="500" placeholder="Short info" style="height:150px;"></textarea>
-        <label for="nftShortInfo">NFT Short info</label>
-    </div>
-    <label for="Near_NFT_price" class="form-label">Amount on Near</label>
-    <div class="input-group mb-3">
-        <span class="input-group-text">$NEAR</span>
-        <input id="Near_NFT_price" name="nft_price_create" type="number" class="form-control rounded-4" aria-label="Amount (on Near)">
-    </div>
-
-    <label for="dolar_NFT_price" class="form-label">About amount on USD (current currency rate)</label>
-    <div class="input-group mb-3">
-        <span class="input-group-text">$</span>
-        <input type="number" id="dolar_NFT_price" class="form-control rounded-4" aria-label="About amount on USD (current currency rate)">
-    </div>
-
-     <hr class="my-4">
-   </div>
 </template>
 
 <template id="img_form">
