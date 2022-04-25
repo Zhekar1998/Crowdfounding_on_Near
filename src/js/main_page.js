@@ -5,39 +5,38 @@ function addProjectList() {
 }
 var NEAR_exchange_data;
 
-function error(){
+function error() {
     console.error("data not find");
 }
-function NEAR_exchange(Data)
-{
+
+function NEAR_exchange(Data) {
 
     // Output only the details on the first post
     console.log(Data);
-    NEAR_exchange_data=Data;
+    NEAR_exchange_data = Data;
     // output the details of first three posts
 
     // output the id field of first five elements.
 
 }
 
-document.getElementById("create_project_modal").onclick = function(){
-    if(window.walletAccount.isSignedIn()) {
+document.getElementById("create_project_modal").onclick = function() {
+    if (window.walletAccount.isSignedIn()) {
         document.getElementById("create_pro").style.display = "block";
         loadJSON("https://helper.mainnet.near.org/fiat", NEAR_exchange, error);
 
-    }else{
+    } else {
         document.getElementById("modalSignIn").style.display = "block";
     }
 }
 
 function loadJSON(path, success, error) {
     var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function () {
+    xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
                 success(JSON.parse(xhr.responseText));
-            }
-            else {
+            } else {
                 error(xhr);
             }
         }
@@ -46,23 +45,23 @@ function loadJSON(path, success, error) {
     xhr.send();
 }
 
-document.getElementById("sign_in_btn_modal").onclick = async ()=> {
+document.getElementById("sign_in_btn_modal").onclick = async() => {
 
     await window.walletAccount.requestSignIn(window.nearConfig.contractName);
-    if(window.walletAccount.isSignedIn()) {
+    if (window.walletAccount.isSignedIn()) {
         document.getElementById("modalSignin").style.display = "none";
         document.getElementById("create_pro").style.display = "block";
         loadJSON("https://helper.mainnet.near.org/fiat", NEAR_exchange, error);
     }
 }
-document.getElementById("btn-close-pro-create").onclick = function () {
+document.getElementById("btn-close-pro-create").onclick = function() {
     document.getElementById("create_pro").style.display = "none";
 }
 
 var img_number = 1;
-document.getElementById("add_img_btn").onclick = function(){
+document.getElementById("add_img_btn").onclick = function() {
     if ('content' in document.createElement('template')) {
-        img_number = img_number+1;
+        img_number = img_number + 1;
         // Находим элемент tbody таблицы
         // и шаблон строки
         let input_place = document.getElementById("img_add");
@@ -80,25 +79,25 @@ document.getElementById("add_img_btn").onclick = function(){
     }
 }
 
-document.getElementById("floatingShortInfo").onchange = function () {
-    
+document.getElementById("floatingShortInfo").onchange = function() {
+
 }
 
-document.getElementById("remove_img_btn").onclick = function(){
+document.getElementById("remove_img_btn").onclick = function() {
     let div_list = document.getElementsByName("image");
 
-    let div_bonus_remove = div_list[div_list.length-1];
+    let div_bonus_remove = div_list[div_list.length - 1];
     div_bonus_remove.parentNode.removeChild(div_bonus_remove);
-    img_number = img_number-1;
-    if (img_number===1){
-        document.getElementById("remove_img_btn").style.display ="none";
+    img_number = img_number - 1;
+    if (img_number === 1) {
+        document.getElementById("remove_img_btn").style.display = "none";
     }
 }
 
 var bonus_number = 0;
-document.getElementById("add_nft_button").onclick = function(){
+document.getElementById("add_nft_button").onclick = function() {
     if ('content' in document.createElement('template')) {
-        bonus_number = bonus_number+1;
+        bonus_number = bonus_number + 1;
         // Находим элемент tbody таблицы
         // и шаблон строки
         var input_place = document.getElementById("NFT_create_place");
@@ -116,12 +115,12 @@ document.getElementById("add_nft_button").onclick = function(){
     }
 }
 
-document.getElementById("Near_amount").onkeyup = function () {
-    document.getElementById("dolar_amount").value = document.getElementById("Near_amount").value*NEAR_exchange_data.near.usd;
+document.getElementById("Near_amount").onkeyup = function() {
+    document.getElementById("dolar_amount").value = document.getElementById("Near_amount").value * NEAR_exchange_data.near.usd;
 }
 
-document.getElementById("dolar_amount").onkeyup = function () {
-    document.getElementById("Near_amount").value = document.getElementById("dolar_amount").value/NEAR_exchange_data.near.usd;
+document.getElementById("dolar_amount").onkeyup = function() {
+    document.getElementById("Near_amount").value = document.getElementById("dolar_amount").value / NEAR_exchange_data.near.usd;
 }
 
 /*window.document.onload = function () {
@@ -141,25 +140,24 @@ document.getElementById("dolar_amount").onkeyup = function () {
     })
 }*/
 
-function near_to_dollar(){
-    for (let i = 0; i<document.getElementsByName("dolar_NFT_price").length; i++) {
+function near_to_dollar() {
+    for (let i = 0; i < document.getElementsByName("dolar_NFT_price").length; i++) {
         document.getElementsByName("dolar_NFT_price")[i].value = document.getElementsByName("nft_price_create")[i].value * NEAR_exchange_data.near.usd;
     }
 }
+
 function dollar_to_near() {
     for (let i = 0; i < document.getElementsByName("dolar_NFT_price").length; i++) {
-        document.getElementsByName("nft_price_create")[i].value = document.getElementsByName("dolar_NFT_price")[i].value/NEAR_exchange_data.near.usd;
+        document.getElementsByName("nft_price_create")[i].value = document.getElementsByName("dolar_NFT_price")[i].value / NEAR_exchange_data.near.usd;
     }
 }
-document.getElementById("remove-nft_button").onclick = function(){
+document.getElementById("remove-nft_button").onclick = function() {
     var div_list = document.getElementsByClassName("div_create_nft");
 
-    var div_bonus_remove = div_list[div_list.length-1];
+    var div_bonus_remove = div_list[div_list.length - 1];
     div_bonus_remove.parentNode.removeChild(div_bonus_remove);
-    bonus_number = bonus_number-1;
-    if (bonus_number===0){
-        document.getElementById("remove-nft_button").style.display ="none";
+    bonus_number = bonus_number - 1;
+    if (bonus_number === 0) {
+        document.getElementById("remove-nft_button").style.display = "none";
     }
 }
-
-
