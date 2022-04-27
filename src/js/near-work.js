@@ -106,7 +106,7 @@ async function update_project_list() {
                 }
                 console.log(img_link)
                 let project = project_list(projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active)
-                if (projects_array[i].metadata.type_pro = 'true') {
+                if (projects_array[i].metadata.type_pro == true) { //don't work correctly
                     document.getElementById("commertial_projects").innerHTML += project;
                 } else {
                     document.getElementById("nonprofit_projects").innerHTML += project;
