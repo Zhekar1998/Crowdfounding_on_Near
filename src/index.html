@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <title>Crowndfounding on Near</title>
     <link href="../css/bootstrap.css" type="text/css" rel="stylesheet">
-    <script src="./js/main_page.js"></script>
-    <script src="./js/near-work.js"></script>
+
+
     <script src="../js/bootstrap.bundle.min.js"></script>
     <style>
         .bd-placeholder-img {
@@ -35,12 +35,12 @@
                     <svg class="bi me-2" width="40" height="32" role="img" aria-label="Bootstrap"><use xlink:href="#bootstrap"></use></svg>
                 </a>
 
-                <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
-                    <li><a href="#" class="nav-link px-2 text-secondary">Commertial</a></li>
-                    <li><a href="#" class="nav-link px-2 text-white">NonProfit</a></li>
-                    <li><a href="#" class="nav-link px-2 text-white">Pricing</a></li>
-                    <li><a href="#" class="nav-link px-2 text-white">FAQs</a></li>
-                    <li><a href="#" class="nav-link px-2 text-white">About</a></li>
+                <ul id="topnav" class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                    <li><a href="#commertial" class="navbtn nav-link px-2 text-secondary">Commertial</a></li>
+                    <li><a href="#nonProfit" class="navbtn nav-link px-2 text-white">NonProfit</a></li>
+                    <li><a href="#price" class="navbtn nav-link px-2 text-white">Pricing</a></li>
+                    <li><a href="#faq" class="navbtn nav-link px-2 text-white">FAQs</a></li>
+                    <li><a href="#about" class="navbtn nav-link px-2 text-white">About</a></li>
                     <li><a href="#" id="create_project_modal" class="nav-link px-2 text-white">Create Project</a> </li>
                 </ul>
 
@@ -55,43 +55,70 @@
                 </div>
             </div>
         </div>
+        <script>
+            topnav.onclick = function(event) {
+                if (event.target.nodeName != 'A') return;
+                if (event.target.classList.contains('navbtn')) {
+                    let href = event.target.getAttribute('href');
+                    menubtnarr = document.getElementsByClassName('navbtn');
+                    for (let i = 0; i < menubtnarr.length; i++) {
+                        thishref = menubtnarr[i].getAttribute('href');
+                        if (thishref != href) {
+                            menubtnarr[i].classList.remove("text-secondary");
+                            menubtnarr[i].classList.add("text-white");
+                            console.log('1: ' + thishref);
+                            thishref = thishref.replace('#', '');
+                            console.log('2: ' + thishref);
+                            document.getElementById(thishref).style.display = 'none';
+                        } else {
+                            menubtnarr[i].classList.add("text-secondary");
+                            menubtnarr[i].classList.remove("text-white");
+                            console.log(thishref);
+                            thishref = thishref.replace('#', '');
+                            document.getElementById(thishref).style.display = 'block';
+                        }
+                    }
+                }
+            }
+        </script>
     </header>
 
 
 
     <main>
-
-        <section class="py-5 text-center container">
-            <div class="row py-lg-5">
-                <div class="col-lg-6 col-md-8 mx-auto">
-                    <h1 class="fw-light">Album example</h1>
-                    <p class="lead text-muted">Something short and leading about the collection below—its contents, the creator, etc. Make it short and sweet, but not too short so folks don’t simply skip over it entirely.</p>
-                    <p>
-                        <a href="#" class="btn btn-primary my-2">Main call to action</a>
-                        <a href="#" class="btn btn-secondary my-2">Secondary action</a>
-                    </p>
+        <div id="commertial" style="display: block;">
+            <section class="py-5 text-center container">
+                <div class="row py-lg-5">
+                    <div class="col-lg-6 col-md-8 mx-auto">
+                        <h1 class="fw-light">Album example</h1>
+                        <p class="lead text-muted">Something short and leading about the collection below—its contents, the creator, etc. Make it short and sweet, but not too short so folks don’t simply skip over it entirely.</p>
+                        <p>
+                            <a href="#" class="btn btn-primary my-2">Main call to action</a>
+                            <a href="#" class="btn btn-secondary my-2">Secondary action</a>
+                        </p>
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <div class="album py-5 bg-light">
-            <div class="container" id="container">
+            <div class="album py-5 bg-light">
+                <div class="container" id="container">
 
-                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="projects">
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="commertial_projects">
 
 
-                    <div class="col" id="col">
-                        <div class="card shadow-sm">
-                            <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"/><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
+                        <div class="col" id="col">
+                            <div class="card shadow-sm">
+                                <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"/><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
 
-                            <div class="card-body">
-                                <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                                <div class="card-body">
+                                    <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                                        </div>
+                                        <small class="text-muted">9 mins</small>
                                     </div>
-                                    <small class="text-muted">9 mins</small>
                                 </div>
                             </div>
                         </div>
@@ -99,6 +126,36 @@
                 </div>
             </div>
         </div>
+
+        <div id="nonProfit" style="display: none;">
+            <section class="py-5 text-center container">
+                <div class="row py-lg-5">
+                    <div class="col-lg-6 col-md-8 mx-auto">
+                        <h1 class="fw-light">Album example</h1>
+                        <p class="lead text-muted">Something short and leading about the collection below—its contents, the creator, etc. Make it short and sweet, but not too short so folks don’t simply skip over it entirely.</p>
+                        <p>
+                            <a href="#" class="btn btn-primary my-2">Main call to action</a>
+                            <a href="#" class="btn btn-secondary my-2">Secondary action</a>
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="album py-5 bg-light">
+                <div class="container" id="container">
+
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="nonprofit_projects">
+
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="price" style="display: none;"><text>In Develop</text></div>
+        <div id="faq" style="display: none;"><text>In Develop</text></div>
+        <div id="about" style="display: none;"><text>In Develop</text></div>
+
 
 
         <!---------------------------------------------MODALS---------------------------------------------------->
@@ -229,9 +286,8 @@
     <script src="./js/main_page.js"></script>
     <script src="./js/near-work.js"></script>
     <script src="../js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
-    <script src="./js/cards.js"></script>
+
+
 </body>
 
 <!----------------------------------------TEMPLATES------------------------------------------------------------------->

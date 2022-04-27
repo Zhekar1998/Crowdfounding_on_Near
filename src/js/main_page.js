@@ -20,10 +20,12 @@ function NEAR_exchange(Data) {
 
 }
 
+
+
 document.getElementById("create_project_modal").onclick = function() {
     if (window.walletAccount.isSignedIn()) {
         document.getElementById("create_pro").style.display = "block";
-        loadJSON("https://helper.mainnet.near.org/fiat", NEAR_exchange, error);
+        loadJSON("https://helper.testnet.near.org/fiat", NEAR_exchange, error);
 
     } else {
         document.getElementById("modalSignIn").style.display = "block";

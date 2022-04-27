@@ -18,7 +18,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 
 pub const TGAS: u64 = 1_000_000_000_000;
 pub const BASE_GAS: u64 = 25 * TGAS;
-pub const CREATOR_ROYALTY_ID: &str ="zhekar1998.testnet";
+pub const CREATOR_ROYALTY_ID: &str ="ylukatsky.testnet";
 pub const CREATOR_ROYALTY: u128 = 1;
 pub const ROYALTY_ID: &str = "us_association.testnet";
 pub const ROYALTY: u128 = 4;
@@ -67,8 +67,9 @@ pub struct DonateBase {
 }
 
 #[derive(
-    Debug, BorshDeserialize, BorshSerialize, PanicOnDefault,
+    Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize, PanicOnDefault,
 )]
+#[serde(crate = "near_sdk::serde")]
 pub struct DonationItemView {
     amount: u128,
     donated: u128,
@@ -215,12 +216,10 @@ impl Donation {
                 receiver: el.receiver.clone(),
                 project_name: el.project_name,
                 time_past: 2592000000000000-env::block_timestamp()-el.create_time,
-                status: el.status,
                 metadata: el.metadata.get().unwrap(),
+                status: el.status,
                 nft_data: el.nft_data,
-                nft_price: el.nft_price,
-
-            })
+                nft_price: el.nft_price})
             .collect()
     }
 }

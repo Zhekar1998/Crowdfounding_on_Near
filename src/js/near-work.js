@@ -1,16 +1,21 @@
 import "regenerator-runtime/runtime"
 import * as nearAPI from "near-api-js"
 import "./main_page.js"
-import { Web3Storage } from 'web3.storage'
+import { Web3Storage } from 'web3.storage/dist/bundle.esm.min.js'
 import inspect from 'browser-util-inspect';
-
-import getConfig from "./config"
 import { utils } from "near-api-js";
+import { create } from 'ipfs-http-client';
 
 
 
 
-window.nearConfig = getConfig(process.env.NODE_ENV || "development");
+window.nearConfig = {
+    networkId: 'testnet',
+    nodeUrl: 'https://rpc.testnet.near.org',
+    contractName: 'crowndfound.testnet',
+    walletUrl: 'https://wallet.testnet.near.org',
+    helperUrl: 'https://helper.testnet.near.org'
+};
 
 const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweEM3MDQ0ZjcyRkExYTQzMmZiRjE1ZUE2MkIyNTc2MzlCRjQ0NUY5QUQiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NDE1NjM3Nzg1MzUsIm5hbWUiOiIxIn0.l33kUNtDs5irZj40uCh2WHoUgCl31T9WSbSSkbxV1_I";
 
@@ -48,7 +53,7 @@ async function initContract() {
         changeMethods: ["add_donation", "donate"],
         sender: window.accountId,
     });
-    await update_project_list();
+
 }
 
 async function doWork() {
@@ -60,31 +65,63 @@ async function doWork() {
     } else {
         signedInFlow();
     }
+    await update_project_list();
+}
 
+async function getLinks(ipfsPath) {
+    const url = 'https://dweb.link/api/v0'
+    const ipfs = create({ url })
+
+    const links = []
+    for await (const link of ipfs.ls(ipfsPath)) {
+        links.push(link)
+    }
+    console.log(links)
 }
 
 var projects_array_lenght = 0
 async function update_project_list() {
     let projects_array = [];
     projects_array = await get_projects();
-    if (projects_array_lenght !== projects_array.length) {
-        projects_array_lenght = projects_array.length;
-        for (let i = 0; i < projects_array_lenght; i++) {
-            let img_link = [];
-            for (let y = 0; y < projects_array[i].metadata.image.length; y++) {
-                img_lin[y] = 'https://' + projects_array[i].metadata.image[y] + '.ipfs.dweb.link';
+    if (projects_array.length >= 1) {
+        if (projects_array_lenght !== projects_array.length) {
+            projects_array_lenght = projects_array.length;
+            document.getElementById("commertial_projects").innerHTML = '';
+            document.getElementById("nonprofit_projects").innerHTML = '';
+            for (let i = 0; i < projects_array_lenght; i++) {
+                let img_link = [];
+                for (let y = 0; y < projects_array[i].metadata.image.length; y++) {
+
+                    let url_ipfs = 'https://dweb.link/api/v0'
+                    let ipfs = create({ url_ipfs })
+
+                    let links = []
+                    for await (const link of ipfs.ls(projects_array[i].metadata.image[y])) {
+                        links.push(link)
+                    }
+                    console.log(links);
+                    let name = links[0].name;
+                    img_link.push('https://' + projects_array[i].metadata.image[y] + '.ipfs.dweb.link/' + name);
+
+                }
+                console.log(img_link)
+                let project = project_list(projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active)
+                if (projects_array[i].metadata.type_pro = 'true') {
+                    document.getElementById("commertial_projects").innerHTML += project;
+                } else {
+                    document.getElementById("nonprofit_projects").innerHTML += project;
+                }
             }
-            let project = project_list(projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active)
-            document.getElementById("projects").innerHTML += project;
         }
     }
-
 }
 
 function project_list(name, img, shortinfo, ammount, money, time, type, status, active) {
     let carusel = '';
     let card_body = '';
     let project_cart = '';
+    console.log('image:');
+    console.log(img);
     if (img.lenght > 1) {
         carusel += '<div class="carousel-indicators"> <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to={0} class="active" aria-current="true" aria-label="Slide 1"></button>';
         for (let i = 1; i < img.lenght; i++) {
@@ -141,7 +178,6 @@ function signedOutFlow() {
 
 async function get_projects() {
     const response = await window.contract.get_donations();
-    response = JSON.parse(response);
     console.log(response);
     return response;
 }
@@ -153,7 +189,11 @@ async function add_donation(amount, type_found, name, metadata, nft_data, nft_pr
     console.log(inspect({
         "amount": amount,
         "receiver": window.accountId,
+        "projectname": name,
+        "nftdata": nft_data,
+        "nftprice": nft_price,
         "type_found_param": type_found,
+        "metadata": metadata
 
 
     }));
@@ -166,10 +206,10 @@ async function add_donation(amount, type_found, name, metadata, nft_data, nft_pr
                     "amount": amount,
                     "receiver": window.accountId,
                     "projectname": name,
-                    "nft_data": nft_data,
-                    "nft_price": nft_price,
+                    "nftdata": nft_data,
+                    "nftprice": nft_price,
                     "type_found_param": type_found,
-                    "metadata": metadata
+                    "metadata_var": metadata
 
 
                 },
@@ -184,10 +224,10 @@ async function add_donation(amount, type_found, name, metadata, nft_data, nft_pr
                 "amount": amount,
                 "receiver": window.accountId,
                 "projectname": name,
-                "nft_data": nft_data,
-                "nft_price": nft_price,
+                "nftdata": nft_data,
+                "nftprice": nft_price,
                 "type_found_param": type_found,
-                "metadata": metadata
+                "metadata_var": metadata
             }
 
         )

@@ -1,53 +1,53 @@
 {
-  "name": "crowndfounding-on-near",
-  "description": "on_test",
-  "version": "0.0.1",
-  "scripts": {
-    "dev:deploy:contract": "near deploy crowndfound.testnet --wasmFile=\"./Contracts/target/wasm32-unknown-unknown/release/crowndfounding_on_near.wasm\" && near call crowndfound.testnet new --accountId crowndfound.testnet && echo \"# This file used by parcel\nCONTRACT_NAME=$(cat neardev/dev-account)\nWEB3STORAGE_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweEM3MDQ0ZjcyRkExYTQzMmZiRjE1ZUE2MkIyNTc2MzlCRjQ0NUY5QUQiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NDE1NjM3Nzg1MzUsIm5hbWUiOiIxIn0.l33kUNtDs5irZj40uCh2WHoUgCl31T9WSbSSkbxV1_I\" > .env.local",
-    "deploy:contract": "near deploy && rm -f .env.local",
-    "deploy": "yarn deploy:contract",
-    "prestart": "yarn build && yarn deploy:contract",
-    "start": "parcel src/index.html",
-    "dev": "yarn dev:deploy:contract && parcel ./src/index.html"
-  },
-  "devDependencies": {
-    "ipfs-car": "^0.6.1",
-    "jest": "^27.3.1",
-    "jest-environment-node": "^27.3.1",
-    "near-cli": "^2.2.0",
-    "near-sdk-as": "^1.2.1",
-    "parcel-bundler": "^1.9.4",
-    "minimist": ">=1.2.6"
-  },
-  "dependencies": {
-    "@popperjs/core": "^2.11.2",
-    "babel-cli": "^6.26.0",
-    "babel-preset-react-app": "^3.1.2",
-    "browser-util-inspect": "^0.2.0",
-    "ipfs-car": "^0.6.1",
-    "log-to-file": "^3.0.0",
-    "near-api-js": "^0.43.1",
-    "nft.storage": "^5.2.0",
-    "regenerator-runtime": "^0.13.9",
-    "web3.storage": "^3.5.2",
-    "minimist": ">=1.2.6"
-  
-  },
-  "jest": {
-    "testPathIgnorePatterns": [
-      "<rootDir>/node_modules/"
-    ]
-  },
-  "main": "index.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Zhekar1998/Crowdfounding_on_Near.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Zhekar1998/Crowdfounding_on_Near/issues"
-  },
-  "homepage": "https://github.com/Zhekar1998/Crowdfounding_on_Near#readme"
+    "name": "crowndfounding-on-near",
+    "description": "on_test",
+    "version": "0.0.1",
+    "scripts": {
+        "dev:deploy:contract": "near deploy crowndfound.testnet --wasmFile=\"./Contracts/target/wasm32-unknown-unknown/release/crowndfounding_on_near.wasm\" && near call crowndfound.testnet new --accountId crowndfound.testnet && echo \"# This file used by parcel\nCONTRACT_NAME=$(cat neardev/dev-account)\nWEB3STORAGE_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweEM3MDQ0ZjcyRkExYTQzMmZiRjE1ZUE2MkIyNTc2MzlCRjQ0NUY5QUQiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NDE1NjM3Nzg1MzUsIm5hbWUiOiIxIn0.l33kUNtDs5irZj40uCh2WHoUgCl31T9WSbSSkbxV1_I\" > .env.local",
+        "deploy:contract": "near deploy && rm -f .env.local",
+        "deploy": "yarn deploy:contract",
+        "start": "parcel src/index.html",
+        "dev": "yarn dev:deploy:contract && parcel ./src/index.html"
+    },
+    "devDependencies": {
+        "ipfs-car": "^0.6.1",
+        "jest": "^27.3.1",
+        "jest-environment-node": "^27.3.1",
+        "minimist": ">=1.2.6",
+        "near-cli": "^2.2.0",
+        "near-sdk-as": "^1.2.1",
+        "parcel-bundler": "^1.9.4"
+    },
+    "dependencies": {
+        "@popperjs/core": "^2.11.2",
+        "babel-cli": "^6.26.0",
+        "babel-preset-react-app": "^3.1.2",
+        "browser-util-inspect": "^0.2.0",
+        "ipfs-car": "^0.6.1",
+        "ipfs-http-client": "^56.0.3",
+        "log-to-file": "^3.0.0",
+        "minimist": ">=1.2.6",
+        "near-api-js": "^0.43.1",
+        "nft.storage": "^5.2.0",
+        "regenerator-runtime": "^0.13.9",
+        "web3.storage": "^3.5.2",
+        "yarn": "^1.22.18"
+    },
+    "jest": {
+        "testPathIgnorePatterns": [
+            "<rootDir>/node_modules/"
+        ]
+    },
+    "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Zhekar1998/Crowdfounding_on_Near.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/Zhekar1998/Crowdfounding_on_Near/issues"
+    },
+    "homepage": "https://github.com/Zhekar1998/Crowdfounding_on_Near#readme"
 }
