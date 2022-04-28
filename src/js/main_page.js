@@ -1,4 +1,5 @@
-import "./near-work"
+//import "./near-work"
+import "regenerator-runtime/runtime"
 
 
 var NEAR_exchange_data;

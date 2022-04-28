@@ -17637,7 +17637,7 @@ require("error-polyfill");
 },{"./key_stores/browser-index":"../node_modules/near-api-js/lib/key_stores/browser-index.js","./common-index":"../node_modules/near-api-js/lib/common-index.js","./browser-connect":"../node_modules/near-api-js/lib/browser-connect.js","error-polyfill":"../node_modules/error-polyfill/index.js"}],"js/main_page.js":[function(require,module,exports) {
 "use strict";
 
-require("./near-work");
+require("regenerator-runtime/runtime");
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
@@ -17800,7 +17800,7 @@ document.getElementById("remove-nft_button").onclick = function () {
     document.getElementById("remove-nft_button").style.display = "none";
   }
 };
-},{"./near-work":"js/near-work.js"}],"../node_modules/web3.storage/dist/bundle.esm.min.js":[function(require,module,exports) {
+},{"regenerator-runtime/runtime":"../node_modules/regenerator-runtime/runtime.js"}],"../node_modules/web3.storage/dist/bundle.esm.min.js":[function(require,module,exports) {
 var global = arguments[3];
 
 "use strict";
@@ -57178,7 +57178,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "44231" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "37775" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
