@@ -56570,10 +56570,6 @@ function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
-function _asyncIterator(iterable) { var method, async, sync, retry = 2; for ("undefined" != typeof Symbol && (async = Symbol.asyncIterator, sync = Symbol.iterator); retry--;) { if (async && null != (method = iterable[async])) return method.call(iterable); if (sync && null != (method = iterable[sync])) return new AsyncFromSyncIterator(method.call(iterable)); async = "@@asyncIterator", sync = "@@iterator"; } throw new TypeError("Object is not async iterable"); }
-
-function AsyncFromSyncIterator(s) { function AsyncFromSyncIteratorContinuation(r) { if (Object(r) !== r) return Promise.reject(new TypeError(r + " is not an object.")); var done = r.done; return Promise.resolve(r.value).then(function (value) { return { value: value, done: done }; }); } return AsyncFromSyncIterator = function AsyncFromSyncIterator(s) { this.s = s, this.n = s.next; }, AsyncFromSyncIterator.prototype = { s: null, n: null, next: function next() { return AsyncFromSyncIteratorContinuation(this.n.apply(this.s, arguments)); }, return: function _return(value) { var ret = this.s.return; return void 0 === ret ? Promise.resolve({ value: value, done: !0 }) : AsyncFromSyncIteratorContinuation(ret.apply(this.s, arguments)); }, throw: function _throw(value) { var thr = this.s.return; return void 0 === thr ? Promise.reject(value) : AsyncFromSyncIteratorContinuation(thr.apply(this.s, arguments)); } }, new AsyncFromSyncIterator(s); }
-
 window.nearConfig = {
   networkId: 'testnet',
   nodeUrl: 'https://rpc.testnet.near.org',
@@ -56694,97 +56690,6 @@ function _doWork() {
   return _doWork.apply(this, arguments);
 }
 
-function getLinks(_x2) {
-  return _getLinks.apply(this, arguments);
-}
-
-function _getLinks() {
-  _getLinks = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(ipfsPath) {
-    var url, ipfs, links, _iteratorAbruptCompletion, _didIteratorError, _iteratorError, _iterator, _step, link;
-
-    return regeneratorRuntime.wrap(function _callee5$(_context5) {
-      while (1) {
-        switch (_context5.prev = _context5.next) {
-          case 0:
-            url = 'https://dweb.link/api/v0';
-            ipfs = (0, _ipfsHttpClient.create)({
-              url: url
-            });
-            links = [];
-            _iteratorAbruptCompletion = false;
-            _didIteratorError = false;
-            _context5.prev = 5;
-            _iterator = _asyncIterator(ipfs.ls(ipfsPath));
-
-          case 7:
-            _context5.next = 9;
-            return _iterator.next();
-
-          case 9:
-            if (!(_iteratorAbruptCompletion = !(_step = _context5.sent).done)) {
-              _context5.next = 15;
-              break;
-            }
-
-            link = _step.value;
-            links.push(link);
-
-          case 12:
-            _iteratorAbruptCompletion = false;
-            _context5.next = 7;
-            break;
-
-          case 15:
-            _context5.next = 21;
-            break;
-
-          case 17:
-            _context5.prev = 17;
-            _context5.t0 = _context5["catch"](5);
-            _didIteratorError = true;
-            _iteratorError = _context5.t0;
-
-          case 21:
-            _context5.prev = 21;
-            _context5.prev = 22;
-
-            if (!(_iteratorAbruptCompletion && _iterator.return != null)) {
-              _context5.next = 26;
-              break;
-            }
-
-            _context5.next = 26;
-            return _iterator.return();
-
-          case 26:
-            _context5.prev = 26;
-
-            if (!_didIteratorError) {
-              _context5.next = 29;
-              break;
-            }
-
-            throw _iteratorError;
-
-          case 29:
-            return _context5.finish(26);
-
-          case 30:
-            return _context5.finish(21);
-
-          case 31:
-            console.log(links);
-
-          case 32:
-          case "end":
-            return _context5.stop();
-        }
-      }
-    }, _callee5, null, [[5, 17, 21, 31], [22,, 26, 30]]);
-  }));
-  return _getLinks.apply(this, arguments);
-}
-
 var projects_array_lenght = 0;
 
 function update_project_list() {
@@ -56792,27 +56697,27 @@ function update_project_list() {
 }
 
 function _update_project_list() {
-  _update_project_list = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6() {
-    var projects_array, i, img_link, y, url_ipfs, ipfs, links, _iteratorAbruptCompletion2, _didIteratorError2, _iteratorError2, _iterator2, _step2, link, _name, project;
+  _update_project_list = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5() {
+    var projects_array, i, img_link, y, client, res, files, _name;
 
-    return regeneratorRuntime.wrap(function _callee6$(_context6) {
+    return regeneratorRuntime.wrap(function _callee5$(_context5) {
       while (1) {
-        switch (_context6.prev = _context6.next) {
+        switch (_context5.prev = _context5.next) {
           case 0:
             projects_array = [];
-            _context6.next = 3;
+            _context5.next = 3;
             return get_projects();
 
           case 3:
-            projects_array = _context6.sent;
+            projects_array = _context5.sent;
 
-            if (!(projects_array.length >= 1)) {
-              _context6.next = 57;
+            if (!(projects_array.length > 0)) {
+              _context5.next = 35;
               break;
             }
 
-            if (!(projects_array_lenght !== projects_array.length)) {
-              _context6.next = 57;
+            if (!(projects_array_lenght != projects_array.length)) {
+              _context5.next = 35;
               break;
             }
 
@@ -56822,8 +56727,8 @@ function _update_project_list() {
             i = 0;
 
           case 10:
-            if (!(i < projects_array_lenght)) {
-              _context6.next = 57;
+            if (!(i < projects_array.length)) {
+              _context5.next = 35;
               break;
             }
 
@@ -56832,146 +56737,99 @@ function _update_project_list() {
 
           case 13:
             if (!(y < projects_array[i].metadata.image.length)) {
-              _context6.next = 51;
+              _context5.next = 31;
               break;
             }
 
-            url_ipfs = 'https://dweb.link/api/v0';
-            ipfs = (0, _ipfsHttpClient.create)({
-              url_ipfs: url_ipfs
-            });
-            links = [];
-            _iteratorAbruptCompletion2 = false;
-            _didIteratorError2 = false;
-            _context6.prev = 19;
-            _iterator2 = _asyncIterator(ipfs.ls(projects_array[i].metadata.image[y]));
+            client = makeStorageClient();
+            console.log(projects_array[i].metadata.image[y]);
+            _context5.next = 18;
+            return client.get(projects_array[i].metadata.image[y]);
 
-          case 21:
-            _context6.next = 23;
-            return _iterator2.next();
+          case 18:
+            res = _context5.sent;
+            console.log("Got a response! [".concat(res.status, "] ").concat(res.statusText));
 
-          case 23:
-            if (!(_iteratorAbruptCompletion2 = !(_step2 = _context6.sent).done)) {
-              _context6.next = 29;
+            if (res.ok) {
+              _context5.next = 22;
               break;
             }
 
-            link = _step2.value;
-            links.push(link);
+            throw new Error("failed to get" + projects_array[i].metadata.image[y]);
 
-          case 26:
-            _iteratorAbruptCompletion2 = false;
-            _context6.next = 21;
-            break;
+          case 22:
+            _context5.next = 24;
+            return res.files();
 
-          case 29:
-            _context6.next = 35;
+          case 24:
+            files = _context5.sent;
+            console.log(files);
+            _name = files[0].name;
+            img_link.push('https://' + projects_array[i].metadata.image[y] + '.ipfs.dweb.link/' + _name);
+
+          case 28:
+            y++;
+            _context5.next = 13;
             break;
 
           case 31:
-            _context6.prev = 31;
-            _context6.t0 = _context6["catch"](19);
-            _didIteratorError2 = true;
-            _iteratorError2 = _context6.t0;
+            project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active, projects_array[i].metadata.type_pro);
+
+          case 32:
+            i++;
+            _context5.next = 10;
+            break;
 
           case 35:
-            _context6.prev = 35;
-            _context6.prev = 36;
-
-            if (!(_iteratorAbruptCompletion2 && _iterator2.return != null)) {
-              _context6.next = 40;
-              break;
-            }
-
-            _context6.next = 40;
-            return _iterator2.return();
-
-          case 40:
-            _context6.prev = 40;
-
-            if (!_didIteratorError2) {
-              _context6.next = 43;
-              break;
-            }
-
-            throw _iteratorError2;
-
-          case 43:
-            return _context6.finish(40);
-
-          case 44:
-            return _context6.finish(35);
-
-          case 45:
-            console.log(links);
-            _name = links[0].name;
-            img_link.push('https://' + projects_array[i].metadata.image[y] + '.ipfs.dweb.link/' + _name);
-
-          case 48:
-            y++;
-            _context6.next = 13;
-            break;
-
-          case 51:
-            console.log(img_link);
-            project = project_list(projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active);
-
-            if (projects_array[i].metadata.type_pro == true) {
-              //don't work correctly
-              document.getElementById("commertial_projects").innerHTML += project;
-            } else {
-              document.getElementById("nonprofit_projects").innerHTML += project;
-            }
-
-          case 54:
-            i++;
-            _context6.next = 10;
-            break;
-
-          case 57:
           case "end":
-            return _context6.stop();
+            return _context5.stop();
         }
       }
-    }, _callee6, null, [[19, 31, 35, 45], [36,, 40, 44]]);
+    }, _callee5);
   }));
   return _update_project_list.apply(this, arguments);
 }
 
-function project_list(name, img, shortinfo, ammount, money, time, type, status, active) {
+function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active, pro_type) {
   var carusel = '';
   var card_body = '';
   var project_cart = '';
   console.log('image:');
-  console.log(img);
+  console.log(img.length);
 
-  if (img.lenght > 1) {
-    carusel += '<div class="carousel-indicators"> <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to={0} class="active" aria-current="true" aria-label="Slide 1"></button>';
+  if (img.length > 1) {
+    carusel += '<div id="carousel' + number + '" class="carousel slide" data-bs-ride="carousel"><div class="carousel-indicators"> <button type="button" data-bs-target="#carousel" data-bs-slide-to=0 class="active" aria-current="true" aria-label="Slide 1"></button>';
 
-    for (var i = 1; i < img.lenght; i++) {
+    for (var i = 1; i < img.length; i++) {
       var b = i + 1;
-      carusel += '<button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to={' + i + '} aria-label="Slide ' + b + '"></button>';
+      carusel += '<button type="button" data-bs-target="#carousel' + number + '" data-bs-slide-to="' + i + '" aria-label="Slide ' + b + '"></button>';
     }
 
-    carusel += '</div><div class="carousel-inner"><div class = "carousel-item active"><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError" /><div style = {position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);}>' + name + '</div></div>';
+    carusel += '</div><div class="carousel-inner"><div class = "carousel-item active"><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError"/><div class="img_top_text">' + name + '</div></div>';
 
-    for (var _i = 1; _i < img.lenght; _i++) {
+    for (var _i = 1; _i < img.length; _i++) {
       carusel += '<div class = "carousel-item"><img src="' + img[_i] + '" class = "d-block w-100" alt = "loadError" /></div>';
     }
 
-    carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carouselExampleIndicators" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carouselExampleIndicators" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div>';
-  } else carusel += '<div><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError" /><divstyle = {position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);}>' + name + '</div></div>';
+    carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carouselExampleIndicators" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div></div>';
+  } else carusel += '<div><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
 
   project_cart = '<div class="col"><div class="card shadow-sm">' + carusel;
   card_body += '<div class = "card-body" > <p class = "card-text" >' + shortinfo + '</p> <div class = "progress"><div class = "progress-bar" role = "progressbar" style = { width: "25%"} aria-valuemin = { 0 } aria-valuemax = {' + ammount + '} aria-valuenow = {' + money + '} </div> </div>';
   card_body += '<div class = "d-flex justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + time + '</small> </div > </div> </div>';
   project_cart += card_body + '</div>';
-  return project_cart;
+  console.log(img);
+
+  if (pro_type == true) {
+    document.getElementById("commertial_projects").innerHTML += project_cart;
+  } else {
+    document.getElementById("nonprofit_projects").innerHTML += project_cart;
+  }
 }
 
 var timerID = setInterval(function () {
   return update_project_list();
-}, 30000);
+}, 60000);
 
 function signedInFlow() {
   document.getElementById('sign-out').style.display = ' ';
@@ -57003,42 +56861,42 @@ function get_projects() {
 }
 
 function _get_projects() {
-  _get_projects = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7() {
+  _get_projects = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6() {
     var response;
-    return regeneratorRuntime.wrap(function _callee7$(_context7) {
+    return regeneratorRuntime.wrap(function _callee6$(_context6) {
       while (1) {
-        switch (_context7.prev = _context7.next) {
+        switch (_context6.prev = _context6.next) {
           case 0:
-            _context7.next = 2;
+            _context6.next = 2;
             return window.contract.get_donations();
 
           case 2:
-            response = _context7.sent;
+            response = _context6.sent;
             console.log(response);
-            return _context7.abrupt("return", response);
+            return _context6.abrupt("return", response);
 
           case 5:
           case "end":
-            return _context7.stop();
+            return _context6.stop();
         }
       }
-    }, _callee7);
+    }, _callee6);
   }));
   return _get_projects.apply(this, arguments);
 }
 
 var premium_payment = nearAPI.utils.format.parseNearAmount("20");
 
-function add_donation(_x3, _x4, _x5, _x6, _x7, _x8) {
+function add_donation(_x2, _x3, _x4, _x5, _x6, _x7) {
   return _add_donation.apply(this, arguments);
 }
 
 function _add_donation() {
-  _add_donation = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(amount, type_found, name, metadata, nft_data, nft_price) {
+  _add_donation = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(amount, type_found, name, metadata, nft_data, nft_price) {
     var account, balance;
-    return regeneratorRuntime.wrap(function _callee8$(_context8) {
+    return regeneratorRuntime.wrap(function _callee7$(_context7) {
       while (1) {
-        switch (_context8.prev = _context8.next) {
+        switch (_context7.prev = _context7.next) {
           case 0:
             console.log((0, _browserUtilInspect.default)({
               "amount": amount,
@@ -57051,27 +56909,27 @@ function _add_donation() {
             }));
 
             if (!document.getElementById("premium_check").checked) {
-              _context8.next = 15;
+              _context7.next = 15;
               break;
             }
 
-            _context8.next = 4;
+            _context7.next = 4;
             return window.walletAccount.account();
 
           case 4:
-            account = _context8.sent;
-            _context8.next = 7;
+            account = _context7.sent;
+            _context7.next = 7;
             return account.getAccountBalance();
 
           case 7:
-            balance = _context8.sent;
+            balance = _context7.sent;
 
             if (!(balance > premium_payment)) {
-              _context8.next = 13;
+              _context7.next = 13;
               break;
             }
 
-            _context8.next = 11;
+            _context7.next = 11;
             return window.contract.add_donation({
               "amount": amount,
               "receiver": window.accountId,
@@ -57083,15 +56941,15 @@ function _add_donation() {
             }, 300000000000000, premium_payment);
 
           case 11:
-            _context8.next = 13;
+            _context7.next = 13;
             break;
 
           case 13:
-            _context8.next = 17;
+            _context7.next = 17;
             break;
 
           case 15:
-            _context8.next = 17;
+            _context7.next = 17;
             return window.contract.add_donation({
               "amount": amount,
               "receiver": window.accountId,
@@ -57104,10 +56962,10 @@ function _add_donation() {
 
           case 17:
           case "end":
-            return _context8.stop();
+            return _context7.stop();
         }
       }
-    }, _callee8);
+    }, _callee7);
   }));
   return _add_donation.apply(this, arguments);
 }
@@ -57245,48 +57103,48 @@ document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( 
   }, _callee);
 }));
 
-function load_to_nft_storage(_x9) {
+function load_to_nft_storage(_x8) {
   return _load_to_nft_storage.apply(this, arguments);
 }
 
 function _load_to_nft_storage() {
-  _load_to_nft_storage = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(image) {
+  _load_to_nft_storage = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(image) {
     var img_array, i, img, cid;
-    return regeneratorRuntime.wrap(function _callee9$(_context9) {
+    return regeneratorRuntime.wrap(function _callee8$(_context8) {
       while (1) {
-        switch (_context9.prev = _context9.next) {
+        switch (_context8.prev = _context8.next) {
           case 0:
             img_array = [];
             i = 0;
 
           case 2:
             if (!(i < image.length)) {
-              _context9.next = 11;
+              _context8.next = 11;
               break;
             }
 
             img = image[i].files;
-            _context9.next = 6;
+            _context8.next = 6;
             return storeFiles(img);
 
           case 6:
-            cid = _context9.sent;
+            cid = _context8.sent;
             img_array.push(cid);
 
           case 8:
             i++;
-            _context9.next = 2;
+            _context8.next = 2;
             break;
 
           case 11:
-            return _context9.abrupt("return", img_array);
+            return _context8.abrupt("return", img_array);
 
           case 12:
           case "end":
-            return _context9.stop();
+            return _context8.stop();
         }
       }
-    }, _callee9);
+    }, _callee8);
   }));
   return _load_to_nft_storage.apply(this, arguments);
 }
@@ -57320,7 +57178,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "39707" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "35709" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

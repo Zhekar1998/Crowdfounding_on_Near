@@ -68,82 +68,73 @@ async function doWork() {
     await update_project_list();
 }
 
-async function getLinks(ipfsPath) {
-    const url = 'https://dweb.link/api/v0'
-    const ipfs = create({ url })
 
-    const links = []
-    for await (const link of ipfs.ls(ipfsPath)) {
-        links.push(link)
-    }
-    console.log(links)
-}
 
-var projects_array_lenght = 0
+var projects_array_lenght = 0;
 async function update_project_list() {
     let projects_array = [];
     projects_array = await get_projects();
-    if (projects_array.length >= 1) {
-        if (projects_array_lenght !== projects_array.length) {
+    if (projects_array.length > 0) {
+        if (projects_array_lenght != projects_array.length) {
             projects_array_lenght = projects_array.length;
             document.getElementById("commertial_projects").innerHTML = '';
             document.getElementById("nonprofit_projects").innerHTML = '';
-            for (let i = 0; i < projects_array_lenght; i++) {
+            for (let i = 0; i < projects_array.length; i++) {
                 let img_link = [];
                 for (let y = 0; y < projects_array[i].metadata.image.length; y++) {
 
-                    let url_ipfs = 'https://dweb.link/api/v0'
-                    let ipfs = create({ url_ipfs })
-
-                    let links = []
-                    for await (const link of ipfs.ls(projects_array[i].metadata.image[y])) {
-                        links.push(link)
+                    let client = makeStorageClient();
+                    console.log(projects_array[i].metadata.image[y])
+                    const res = await client.get(projects_array[i].metadata.image[y])
+                    console.log(`Got a response! [${res.status}] ${res.statusText}`)
+                    if (!res.ok) {
+                        throw new Error(`failed to get` + projects_array[i].metadata.image[y])
                     }
-                    console.log(links);
-                    let name = links[0].name;
+                    const files = await res.files()
+                    console.log(files);
+                    let name = files[0].name;
                     img_link.push('https://' + projects_array[i].metadata.image[y] + '.ipfs.dweb.link/' + name);
+                }
 
-                }
-                console.log(img_link)
-                let project = project_list(projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active)
-                if (projects_array[i].metadata.type_pro == true) { //don't work correctly
-                    document.getElementById("commertial_projects").innerHTML += project;
-                } else {
-                    document.getElementById("nonprofit_projects").innerHTML += project;
-                }
+                project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active, projects_array[i].metadata.type_pro);
             }
         }
     }
 }
 
-function project_list(name, img, shortinfo, ammount, money, time, type, status, active) {
+function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active, pro_type) {
     let carusel = '';
     let card_body = '';
     let project_cart = '';
     console.log('image:');
-    console.log(img);
-    if (img.lenght > 1) {
-        carusel += '<div class="carousel-indicators"> <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to={0} class="active" aria-current="true" aria-label="Slide 1"></button>';
-        for (let i = 1; i < img.lenght; i++) {
+    console.log(img.length);
+    if (img.length > 1) {
+        carusel += '<div id="carousel' + number + '" class="carousel slide" data-bs-ride="carousel"><div class="carousel-indicators"> <button type="button" data-bs-target="#carousel" data-bs-slide-to=0 class="active" aria-current="true" aria-label="Slide 1"></button>';
+        for (let i = 1; i < img.length; i++) {
             let b = i + 1;
-            carusel += '<button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to={' + i + '} aria-label="Slide ' + b + '"></button>';
+            carusel += '<button type="button" data-bs-target="#carousel' + number + '" data-bs-slide-to="' + i + '" aria-label="Slide ' + b + '"></button>';
         }
-        carusel += '</div><div class="carousel-inner"><div class = "carousel-item active"><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError" /><div style = {position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);}>' + name + '</div></div>';
-        for (let i = 1; i < img.lenght; i++) {
+        carusel += '</div><div class="carousel-inner"><div class = "carousel-item active"><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError"/><div class="img_top_text">' + name + '</div></div>';
+        for (let i = 1; i < img.length; i++) {
             carusel += '<div class = "carousel-item"><img src="' + img[i] + '" class = "d-block w-100" alt = "loadError" /></div>';
         }
-        carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carouselExampleIndicators" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carouselExampleIndicators" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div>';
-    } else carusel += '<div><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError" /><divstyle = {position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);}>' + name + '</div></div>';
+        carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carouselExampleIndicators" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div></div>';
+    } else carusel += '<div><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
     project_cart = '<div class="col"><div class="card shadow-sm">' + carusel;
     card_body += '<div class = "card-body" > <p class = "card-text" >' + shortinfo + '</p> <div class = "progress"><div class = "progress-bar" role = "progressbar" style = { width: "25%"} aria-valuemin = { 0 } aria-valuemax = {' + ammount + '} aria-valuenow = {' + money + '} </div> </div>'
 
     card_body += '<div class = "d-flex justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + time + '</small> </div > </div> </div>'
     project_cart += card_body + '</div>';
-    return project_cart;
+    console.log(img)
+    if (pro_type == true) {
+        document.getElementById("commertial_projects").innerHTML += project_cart;
+    } else {
+        document.getElementById("nonprofit_projects").innerHTML += project_cart;
+    }
 }
 
 
-let timerID = setInterval(() => update_project_list(), 30000);
+let timerID = setInterval(() => update_project_list(), 60000);
 
 
 function signedInFlow() {
