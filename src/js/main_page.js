@@ -1,8 +1,6 @@
 import "./near-work"
 
-function addProjectList() {
 
-}
 var NEAR_exchange_data;
 
 function error() {

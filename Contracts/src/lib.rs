@@ -41,7 +41,7 @@ pub struct DonationItem {
     create_time: u64,
     type_found: bool,
     status: u8, //1-- base, 2-- premium, 3 association
-    metadata: LazyOption<Metadata>,
+    metadata: Metadata,
     nft_data: Vec<TokenMetadata>,
     nft_price: Vec<u128>,
     donate_base: Vec<DonateBase>,
@@ -127,7 +127,7 @@ impl Donation {
             create_time: env::block_timestamp(),
             type_found: type_found_param,
             status: status_var,
-            metadata: LazyOption::new(b"m", Some(&metadata_var)),
+            metadata: metadata_var,
             nft_data: nftdata,
             nft_price: nftprice,
             donate_base: Vec::new(),
@@ -216,7 +216,7 @@ impl Donation {
                 receiver: el.receiver.clone(),
                 project_name: el.project_name,
                 time_past: 2592000000000000-env::block_timestamp()-el.create_time,
-                metadata: el.metadata.get().unwrap(),
+                metadata: el.metadata,
                 status: el.status,
                 nft_data: el.nft_data,
                 nft_price: el.nft_price})

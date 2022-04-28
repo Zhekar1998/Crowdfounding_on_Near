@@ -56472,7 +56472,7 @@ function _initContract() {
 
             window.accountId = window.walletAccount.getAccountId(); // Initializing our contract APIs by contract name and configuration.
 
-            window.contract = new nearAPI.Contract(window.walletAccount.account(), "crowndfound.testnet", {
+            window.contract = new nearAPI.Contract(window.walletAccount.account(), "crowfound.crowndfound.testnet", {
               // NOTE: This configuration only needed while NEAR is still in development
               // View methods are read only. They don't modify the state, but usually return some value.
               // Sender is the account ID to initialize transactions.
@@ -56544,12 +56544,12 @@ function _update_project_list() {
             projects_array = _context5.sent;
 
             if (!(projects_array.length > 0)) {
-              _context5.next = 35;
+              _context5.next = 37;
               break;
             }
 
             if (!(projects_array_lenght != projects_array.length)) {
-              _context5.next = 35;
+              _context5.next = 37;
               break;
             }
 
@@ -56560,7 +56560,7 @@ function _update_project_list() {
 
           case 10:
             if (!(i < projects_array.length)) {
-              _context5.next = 35;
+              _context5.next = 37;
               break;
             }
 
@@ -56605,14 +56605,16 @@ function _update_project_list() {
             break;
 
           case 31:
-            project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active, projects_array[i].metadata.type_pro);
+            console.log('type_pro:');
+            console.log(projects_array[i].metadata.type_pro);
+            project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active);
 
-          case 32:
+          case 34:
             i++;
             _context5.next = 10;
             break;
 
-          case 35:
+          case 37:
           case "end":
             return _context5.stop();
         }
@@ -56622,7 +56624,7 @@ function _update_project_list() {
   return _update_project_list.apply(this, arguments);
 }
 
-function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active, pro_type) {
+function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active) {
   var carusel = '';
   var card_body = '';
   var project_cart = '';
@@ -56643,16 +56645,16 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
       carusel += '<div class = "carousel-item"><img src="' + img[_i] + '" class = "d-block w-100" alt = "loadError" /></div>';
     }
 
-    carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carouselExampleIndicators" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div></div>';
+    carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div></div>';
   } else carusel += '<div><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
 
   project_cart = '<div class="col"><div class="card shadow-sm">' + carusel;
   card_body += '<div class = "card-body" > <p class = "card-text" >' + shortinfo + '</p> <div class = "progress"><div class = "progress-bar" role = "progressbar" style = { width: "25%"} aria-valuemin = { 0 } aria-valuemax = {' + ammount + '} aria-valuenow = {' + money + '} </div> </div>';
   card_body += '<div class = "d-flex justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + time + '</small> </div > </div> </div>';
   project_cart += card_body + '</div>';
-  console.log(img);
+  console.log(type);
 
-  if (pro_type == true) {
+  if (type == true) {
     document.getElementById("commertial_projects").innerHTML += project_cart;
   } else {
     document.getElementById("nonprofit_projects").innerHTML += project_cart;
@@ -56991,8 +56993,6 @@ function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
-function addProjectList() {}
-
 var NEAR_exchange_data;
 
 function error() {
@@ -57178,7 +57178,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "35709" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "44231" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

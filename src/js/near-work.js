@@ -43,7 +43,7 @@ async function initContract() {
 
 
     // Initializing our contract APIs by contract name and configuration.
-    window.contract = new nearAPI.Contract(window.walletAccount.account(), "crowndfound.testnet", {
+    window.contract = new nearAPI.Contract(window.walletAccount.account(), "crowfound.crowndfound.testnet", {
         // NOTE: This configuration only needed while NEAR is still in development
         // View methods are read only. They don't modify the state, but usually return some value.
         // Sender is the account ID to initialize transactions.
@@ -95,14 +95,15 @@ async function update_project_list() {
                     let name = files[0].name;
                     img_link.push('https://' + projects_array[i].metadata.image[y] + '.ipfs.dweb.link/' + name);
                 }
-
-                project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active, projects_array[i].metadata.type_pro);
+                console.log('type_pro:');
+                console.log(projects_array[i].metadata.type_pro);
+                project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active);
             }
         }
     }
 }
 
-function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active, pro_type) {
+function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active) {
     let carusel = '';
     let card_body = '';
     let project_cart = '';
@@ -118,15 +119,15 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
         for (let i = 1; i < img.length; i++) {
             carusel += '<div class = "carousel-item"><img src="' + img[i] + '" class = "d-block w-100" alt = "loadError" /></div>';
         }
-        carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carouselExampleIndicators" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div></div>';
+        carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div></div>';
     } else carusel += '<div><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
     project_cart = '<div class="col"><div class="card shadow-sm">' + carusel;
     card_body += '<div class = "card-body" > <p class = "card-text" >' + shortinfo + '</p> <div class = "progress"><div class = "progress-bar" role = "progressbar" style = { width: "25%"} aria-valuemin = { 0 } aria-valuemax = {' + ammount + '} aria-valuenow = {' + money + '} </div> </div>'
 
     card_body += '<div class = "d-flex justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + time + '</small> </div > </div> </div>'
     project_cart += card_body + '</div>';
-    console.log(img)
-    if (pro_type == true) {
+    console.log(type);
+    if (type == true) {
         document.getElementById("commertial_projects").innerHTML += project_cart;
     } else {
         document.getElementById("nonprofit_projects").innerHTML += project_cart;
