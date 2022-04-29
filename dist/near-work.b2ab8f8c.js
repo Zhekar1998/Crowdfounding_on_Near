@@ -56772,8 +56772,8 @@ function _update_project_list() {
 
           case 31:
             console.log('type_pro:');
-            console.log(projects_array[i].metadata.type_pro);
-            project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].active);
+            console.log(projects_array[i].status);
+            project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].status, projects_array[i].active);
 
           case 34:
             i++;
@@ -56791,11 +56791,22 @@ function _update_project_list() {
 }
 
 function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active) {
+  console.log(active);
   var carusel = '';
   var card_body = '';
   var project_cart = '';
   console.log('image:');
   console.log(img.length);
+  ammount = ammount / Math.pow(10, 24);
+  console.log(time);
+  time = time / 1000000000;
+  var days = Math.floor(time / 86400);
+  var hours = Math.floor((time - days * 86400) / 3600);
+  console.log(status);
+
+  if (days == 0) {
+    var _minute = Math.floor((time - hours * 3600) / 60);
+  }
 
   if (img.length > 1) {
     carusel += '<div id="carousel' + number + '" class="carousel slide" data-bs-ride="carousel"><div class="carousel-indicators"> <button type="button" data-bs-target="#carousel" data-bs-slide-to=0 class="active" aria-current="true" aria-label="Slide 1"></button>';
@@ -56805,18 +56816,35 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
       carusel += '<button type="button" data-bs-target="#carousel' + number + '" data-bs-slide-to="' + i + '" aria-label="Slide ' + b + '"></button>';
     }
 
-    carusel += '</div><div class="carousel-inner"><div class = "carousel-item active"><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError"/><div class="img_top_text">' + name + '</div></div>';
+    carusel += '</div><div class="carousel-inner"><div class = "carousel-item active"><img src="' + img[0] + '" class = "d-block rounded-top w-100 carusel_img" alt = "loadError"/></div>';
 
     for (var _i = 1; _i < img.length; _i++) {
-      carusel += '<div class = "carousel-item"><img src="' + img[_i] + '" class = "d-block w-100" alt = "loadError" /></div>';
+      carusel += '<div class = "carousel-item"><img src="' + img[_i] + '" class = "carusel_img rounded-top d-block w-100" alt = "loadError" /></div>';
     }
 
-    carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div></div>';
-  } else carusel += '<div><img src="' + img[0] + '" class = "d-block w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
+    carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div> <div class="img_top_text">' + name + '</div>';
+  } else carusel += '<div><img src="' + img[0] + '" class = "d-block carusel_img w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
 
-  project_cart = '<div class="col"><div class="card shadow-sm">' + carusel;
-  card_body += '<div class = "card-body" > <p class = "card-text" >' + shortinfo + '</p> <div class = "progress"><div class = "progress-bar" role = "progressbar" style = { width: "25%"} aria-valuemin = { 0 } aria-valuemax = {' + ammount + '} aria-valuenow = {' + money + '} </div> </div>';
-  card_body += '<div class = "d-flex justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + time + '</small> </div > </div> </div>';
+  if (status == 2) {
+    project_cart = '<div class="col"><div class="card shadow-sm"> <span class="position-absolute top-0 start-50 translate-middle p-2 bg-premium"><span class="visually-hidden">New alerts</span></span>' + carusel;
+  } else if (status == 1) {
+    project_cart = '<div class="col"><div class="card shadow-sm"> ' + carusel;
+  } else if (status == 3) {
+    project_cart = '<div class="col"><div class="card shadow-sm"> <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger bg-premium border border-light rounded-circle"><span class="visually-hidden">New alerts</span></span>' + carusel;
+  }
+
+  card_body += '<div class = "card-body" > <p class = "card-text" >' + shortinfo + '</p> <div class = "progress"><div class="progress-bar bg-success" style="width:' + money / ammount * 100 + '%" role = "progressbar"  aria-valuemin = "0"  aria-valuemax = "' + ammount + '" aria-valuenow = "' + money + '">' + money + '</div></div><div class="pt-1 pb-3"><p class="alignleft">0</p><p class="alignright">' + ammount + '</p></div>';
+
+  if (active == true) {
+    if (days == 0) {
+      card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + hours + 'hours' + minute + 'minutes </small> </div > </div> </div>';
+    } else {
+      card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + days + ' days ' + hours + ' hours </small> </div > </div> </div>';
+    }
+  } else {
+    card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> </div > <small class = "text-muted" > "Found end" </small> </div > </div> </div>';
+  }
+
   project_cart += card_body + '</div>';
   console.log(type);
 
@@ -57178,7 +57206,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "37775" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "37391" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

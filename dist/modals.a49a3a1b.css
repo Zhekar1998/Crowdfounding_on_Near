@@ -100,4 +100,24 @@
     font-weight: bold;
 }
 
+.carusel_img {
+    width: 100%;
+    aspect-ratio: 16/9;
+}
+
+.alignleft {
+    float: left;
+}
+
+.alignright {
+    float: right;
+}
+
+.bg-premium {
+    background-image: url(/rsz_index-removebg-preview.a28d8380.png);
+    height: 56px;
+    width: 56px;
+    z-index: 1;
+}
+
 /*# sourceMappingURL=/modals.a49a3a1b.css.map */

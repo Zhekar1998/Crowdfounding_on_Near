@@ -1,5 +1,4 @@
 use near_contract_standards::non_fungible_token::metadata::TokenMetadata;
-use near_sdk::collections::LazyOption;
 use near_sdk::{borsh};
 use near_sdk::borsh::BorshDeserialize;
 use near_sdk::borsh::BorshSerialize;
@@ -79,7 +78,8 @@ pub struct DonationItemView {
    metadata: Metadata,
     status: u8,
     nft_data: Vec<TokenMetadata>,
-    nft_price: Vec<u128>
+    nft_price: Vec<u128>,
+    active: bool
 
 }
 #[derive(
@@ -215,11 +215,12 @@ impl Donation {
                 donated: el.donated,
                 receiver: el.receiver.clone(),
                 project_name: el.project_name,
-                time_past: 2592000000000000-env::block_timestamp()-el.create_time,
+                time_past: 2592000000000000-(env::block_timestamp()-el.create_time),
                 metadata: el.metadata,
                 status: el.status,
                 nft_data: el.nft_data,
-                nft_price: el.nft_price})
+                nft_price: el.nft_price,
+                active: el.active})
             .collect()
     }
 }

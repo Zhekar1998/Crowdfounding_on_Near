@@ -99,3 +99,23 @@
     font-size: x-large;
     font-weight: bold;
 }
+
+.carusel_img {
+    width: 100%;
+    aspect-ratio: 16/9;
+}
+
+.alignleft {
+    float: left;
+}
+
+.alignright {
+    float: right;
+}
+
+.bg-premium {
+    background-image: url(img/rsz_index-removebg-preview.png);
+    height: 56px;
+    width: 56px;
+    z-index: 1;
+}
