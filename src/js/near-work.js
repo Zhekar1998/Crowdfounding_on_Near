@@ -5,6 +5,9 @@ import { Web3Storage } from 'web3.storage/dist/bundle.esm.min.js'
 import inspect from 'browser-util-inspect';
 import { utils } from "near-api-js";
 import { create } from 'ipfs-http-client';
+import { findSeatPrice } from "near-api-js/lib/validators";
+import 'fs';
+import { async } from "regenerator-runtime/runtime";
 
 
 
@@ -69,10 +72,10 @@ async function doWork() {
 }
 
 
-
+var projects_array = [];
 var projects_array_lenght = 0;
 async function update_project_list() {
-    let projects_array = [];
+    projects_array = [];
     projects_array = await get_projects();
     if (projects_array.length > 0) {
         if (projects_array_lenght != projects_array.length) {
@@ -97,13 +100,13 @@ async function update_project_list() {
                 }
                 console.log('type_pro:');
                 console.log(projects_array[i].status);
-                project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].status, projects_array[i].active);
+                project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].status, projects_array[i].active, projects_array[i].receiver);
             }
         }
     }
 }
 
-function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active) {
+function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active, receiver) {
     console.log(active);
     let carusel = '';
     let card_body = '';
@@ -136,17 +139,17 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
     } else if (status == 1) {
         project_cart = '<div class="col"><div class="card shadow-sm"> ' + carusel;
     } else if (status == 3) {
-        project_cart = '<div class="col"><div class="card shadow-sm"> <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger bg-premium border border-light rounded-circle"><span class="visually-hidden">New alerts</span></span>' + carusel;
+        project_cart = '<div class="col"><div class="card shadow-sm"> <span class="position-absolute top-0 start-50 translate-middle p-2 bg-asocc"><span class="visually-hidden">New alerts</span></span>' + carusel;
     }
     card_body += '<div class = "card-body" > <p class = "card-text" >' + shortinfo + '</p> <div class = "progress"><div class="progress-bar bg-success" style="width:' + money / ammount * 100 + '%" role = "progressbar"  aria-valuemin = "0"  aria-valuemax = "' + ammount + '" aria-valuenow = "' + money + '">' + money + '</div></div><div class="pt-1 pb-3"><p class="alignleft">0</p><p class="alignright">' + ammount + '</p></div>'
     if (active == true) {
         if (days == 0) {
-            card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + hours + 'hours' + minute + 'minutes </small> </div > </div> </div>';
+            card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="view_pro(\'' + name + '\')"> View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="donate(\'' + name + '\',\'' + receiver + '\')" > Donate </button> </div ><small class = "text-muted" > ' + receiver + ' </small> <small class = "text-muted" >' + hours + 'hours' + minute + 'minutes </small> </div > </div> </div>';
         } else {
-            card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + days + ' days ' + hours + ' hours </small> </div > </div> </div>'
+            card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="view_pro(\'' + name + '\')"> View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="donate(\'' + name + '\',\'' + receiver + '\')" > Donate </button> </div > <small class = "text-muted" > ' + receiver + ' </small> <small class = "text-muted" >' + days + ' days ' + hours + ' hours </small> </div > </div> </div>'
         }
     } else {
-        card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> </div > <small class = "text-muted" > "Found end" </small> </div > </div> </div>';
+        card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="view_pro(\'' + name + '\')"> View </button> </div > <small class = "text-muted" > ' + receiver + ' </small><small class = "text-muted" > "Found end" </small> </div > </div> </div>';
     }
     project_cart += card_body + '</div>';
     console.log(type);
@@ -159,6 +162,59 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
 
 
 let timerID = setInterval(() => update_project_list(), 60000);
+
+
+var old_maxprice = 0;
+document.getElementById("near_donate_summ").onchange = async function() {
+    let index;
+    for (let i = 0; i < projects_array.length; i++) {
+        if (projects_array[i].project_name == document.getElementById("donate_pro_name").innerText) {
+            index = i;
+        }
+    }
+
+    let max_price = 0;
+    let nft_index;
+    for (let i = 0; i < projects_array[index].nft_price.length; i++) {
+        if (document.getElementById("near_donate_summ").value > projects_array[index].nft_price[i]) {
+            if (projects_array[index].nft_price[i] > max_price) {
+                max_price = projects_array[index].nft_price[i];
+                nft_index = i;
+            }
+        }
+    }
+    if (max_price != old_maxprice) {
+        document.getElementById("bonus-name-db").innerText = projects_array[index].nft_data[nft_index].title;
+        let client = makeStorageClient();
+        console.log(projects_array[index].nft_data[nft_index].media);
+        const res = await client.get(projects_array[index].nft_data[nft_index].media);
+        console.log(`Got a response! [${res.status}] ${res.statusText}`);
+        if (!res.ok) {
+            throw new Error(`failed to get` + projects_array[index].nft_data[nft_index].media);
+        }
+        const files = await res.files()
+        console.log(files);
+        let name = files[0].name;
+        let img_src = 'https://' + projects_array[index].nft_data[nft_index].media + '.ipfs.dweb.link/' + name;
+        document.getElementById("bonus-img").src = img_src;
+        old_maxprice = max_price;
+    }
+}
+
+document.getElementById("donate-btn").onclick = async function() {
+    let donation_summ = document.getElementById("near_donate_summ").value;
+    let proj_name = document.getElementById("donate_pro_name").innerText;
+    let receiver = document.getElementById("receiver_donate").innerText;
+    donation_summ = utils.format.parseNearAmount(donation_summ);
+    await window.contract.donate({
+            "receiver": receiver,
+            "projectname": proj_name
+        },
+        300000000000000,
+        donation_summ
+    );
+    document.getElementById("donateBox").style.display = "none";
+}
 
 
 function signedInFlow() {
@@ -343,7 +399,12 @@ document.getElementById("create_btn").onclick = async() => {
         let file_cid = await storeFiles(files);*/
 
     await add_donation(amount, type_found, name, pro_data_create, nft_data, nftPrice);
+    document.getElementById("create_pro").style.display = "none";
+    document.getElementById("create_page").style.display = "block";
+    document.getElementById("pro_name").innerHTML = name;
 }
+
+
 
 
 

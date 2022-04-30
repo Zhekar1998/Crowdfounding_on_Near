@@ -56546,7 +56546,7 @@ exports.globSource = globSource;
 },{"ipfs-core-utils/multibases":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multibases.js","ipfs-core-utils/multicodecs":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multicodecs.js","ipfs-core-utils/multihashes":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multihashes.js","@ipld/dag-pb":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/cjs/src/index.js","@ipld/dag-cbor":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/cjs/index.js","@ipld/dag-json":"../node_modules/@ipld/dag-json/cjs/index.js","dag-jose":"../node_modules/dag-jose/lib/index.js","multiformats/hashes/identity":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/identity.js","multiformats/basics":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/basics.js","./bitswap/index.js":"../node_modules/ipfs-http-client/cjs/src/bitswap/index.js","./block/index.js":"../node_modules/ipfs-http-client/cjs/src/block/index.js","./bootstrap/index.js":"../node_modules/ipfs-http-client/cjs/src/bootstrap/index.js","./config/index.js":"../node_modules/ipfs-http-client/cjs/src/config/index.js","./dag/index.js":"../node_modules/ipfs-http-client/cjs/src/dag/index.js","./dht/index.js":"../node_modules/ipfs-http-client/cjs/src/dht/index.js","./diag/index.js":"../node_modules/ipfs-http-client/cjs/src/diag/index.js","./files/index.js":"../node_modules/ipfs-http-client/cjs/src/files/index.js","./key/index.js":"../node_modules/ipfs-http-client/cjs/src/key/index.js","./log/index.js":"../node_modules/ipfs-http-client/cjs/src/log/index.js","./name/index.js":"../node_modules/ipfs-http-client/cjs/src/name/index.js","./object/index.js":"../node_modules/ipfs-http-client/cjs/src/object/index.js","./pin/index.js":"../node_modules/ipfs-http-client/cjs/src/pin/index.js","./pubsub/index.js":"../node_modules/ipfs-http-client/cjs/src/pubsub/index.js","./refs/index.js":"../node_modules/ipfs-http-client/cjs/src/refs/index.js","./repo/index.js":"../node_modules/ipfs-http-client/cjs/src/repo/index.js","./stats/index.js":"../node_modules/ipfs-http-client/cjs/src/stats/index.js","./swarm/index.js":"../node_modules/ipfs-http-client/cjs/src/swarm/index.js","./add.js":"../node_modules/ipfs-http-client/cjs/src/add.js","./add-all.js":"../node_modules/ipfs-http-client/cjs/src/add-all.js","./cat.js":"../node_modules/ipfs-http-client/cjs/src/cat.js","./commands.js":"../node_modules/ipfs-http-client/cjs/src/commands.js","./dns.js":"../node_modules/ipfs-http-client/cjs/src/dns.js","./get-endpoint-config.js":"../node_modules/ipfs-http-client/cjs/src/get-endpoint-config.js","./get.js":"../node_modules/ipfs-http-client/cjs/src/get.js","./id.js":"../node_modules/ipfs-http-client/cjs/src/id.js","./is-online.js":"../node_modules/ipfs-http-client/cjs/src/is-online.js","./ls.js":"../node_modules/ipfs-http-client/cjs/src/ls.js","./mount.js":"../node_modules/ipfs-http-client/cjs/src/mount.js","./ping.js":"../node_modules/ipfs-http-client/cjs/src/ping.js","./resolve.js":"../node_modules/ipfs-http-client/cjs/src/resolve.js","./start.js":"../node_modules/ipfs-http-client/cjs/src/start.js","./stop.js":"../node_modules/ipfs-http-client/cjs/src/stop.js","./version.js":"../node_modules/ipfs-http-client/cjs/src/version.js","ipfs-utils/src/files/glob-source.js":"../node_modules/parcel-bundler/src/builtins/_empty.js","multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","multiaddr":"../node_modules/multiaddr/src/index.js","ipfs-utils/src/files/url-source.js":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/files/url-source.js"}],"js/near-work.js":[function(require,module,exports) {
 "use strict";
 
-require("regenerator-runtime/runtime");
+var _runtime = require("regenerator-runtime/runtime");
 
 var nearAPI = _interopRequireWildcard(require("near-api-js"));
 
@@ -56557,6 +56557,10 @@ var _bundleEsmMin = require("web3.storage/dist/bundle.esm.min.js");
 var _browserUtilInspect = _interopRequireDefault(require("browser-util-inspect"));
 
 var _ipfsHttpClient = require("ipfs-http-client");
+
+var _validators = require("near-api-js/lib/validators");
+
+require("fs");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -56588,27 +56592,27 @@ function storeFiles(_x) {
 }
 
 function _storeFiles() {
-  _storeFiles = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(files) {
+  _storeFiles = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4(files) {
     var client, cid;
-    return regeneratorRuntime.wrap(function _callee2$(_context2) {
+    return regeneratorRuntime.wrap(function _callee4$(_context4) {
       while (1) {
-        switch (_context2.prev = _context2.next) {
+        switch (_context4.prev = _context4.next) {
           case 0:
             client = makeStorageClient();
-            _context2.next = 3;
+            _context4.next = 3;
             return client.put(files);
 
           case 3:
-            cid = _context2.sent;
+            cid = _context4.sent;
             console.log('stored files with cid:', cid);
-            return _context2.abrupt("return", cid);
+            return _context4.abrupt("return", cid);
 
           case 6:
           case "end":
-            return _context2.stop();
+            return _context4.stop();
         }
       }
-    }, _callee2);
+    }, _callee4);
   }));
   return _storeFiles.apply(this, arguments);
 }
@@ -56618,12 +56622,12 @@ function initContract() {
 }
 
 function _initContract() {
-  _initContract = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3() {
-    return regeneratorRuntime.wrap(function _callee3$(_context3) {
+  _initContract = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5() {
+    return regeneratorRuntime.wrap(function _callee5$(_context5) {
       while (1) {
-        switch (_context3.prev = _context3.next) {
+        switch (_context5.prev = _context5.next) {
           case 0:
-            _context3.next = 2;
+            _context5.next = 2;
             return nearAPI.connect(Object.assign({
               deps: {
                 keyStore: new nearAPI.keyStores.BrowserLocalStorageKeyStore()
@@ -56631,7 +56635,7 @@ function _initContract() {
             }, nearConfig));
 
           case 2:
-            window.near = _context3.sent;
+            window.near = _context5.sent;
             // Initializing Wallet based Account. It can work with NEAR TestNet wallet that
             // is hosted at https://wallet.testnet.near.org
             window.walletAccount = new nearAPI.WalletAccount(window.near); // Getting the Account ID. If unauthorized yet, it's just empty string.
@@ -56650,10 +56654,10 @@ function _initContract() {
 
           case 6:
           case "end":
-            return _context3.stop();
+            return _context5.stop();
         }
       }
-    }, _callee3);
+    }, _callee5);
   }));
   return _initContract.apply(this, arguments);
 }
@@ -56663,10 +56667,10 @@ function doWork() {
 }
 
 function _doWork() {
-  _doWork = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4() {
-    return regeneratorRuntime.wrap(function _callee4$(_context4) {
+  _doWork = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6() {
+    return regeneratorRuntime.wrap(function _callee6$(_context6) {
       while (1) {
-        switch (_context4.prev = _context4.next) {
+        switch (_context6.prev = _context6.next) {
           case 0:
             // Based on whether you've authorized, checking which flow we should go.
             if (!window.walletAccount.isSignedIn()) {
@@ -56675,19 +56679,20 @@ function _doWork() {
               signedInFlow();
             }
 
-            _context4.next = 3;
+            _context6.next = 3;
             return update_project_list();
 
           case 3:
           case "end":
-            return _context4.stop();
+            return _context6.stop();
         }
       }
-    }, _callee4);
+    }, _callee6);
   }));
   return _doWork.apply(this, arguments);
 }
 
+var projects_array = [];
 var projects_array_lenght = 0;
 
 function update_project_list() {
@@ -56695,27 +56700,27 @@ function update_project_list() {
 }
 
 function _update_project_list() {
-  _update_project_list = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5() {
-    var projects_array, i, img_link, y, client, res, files, _name;
+  _update_project_list = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7() {
+    var i, img_link, y, client, res, files, _name2;
 
-    return regeneratorRuntime.wrap(function _callee5$(_context5) {
+    return regeneratorRuntime.wrap(function _callee7$(_context7) {
       while (1) {
-        switch (_context5.prev = _context5.next) {
+        switch (_context7.prev = _context7.next) {
           case 0:
             projects_array = [];
-            _context5.next = 3;
+            _context7.next = 3;
             return get_projects();
 
           case 3:
-            projects_array = _context5.sent;
+            projects_array = _context7.sent;
 
             if (!(projects_array.length > 0)) {
-              _context5.next = 37;
+              _context7.next = 37;
               break;
             }
 
             if (!(projects_array_lenght != projects_array.length)) {
-              _context5.next = 37;
+              _context7.next = 37;
               break;
             }
 
@@ -56726,7 +56731,7 @@ function _update_project_list() {
 
           case 10:
             if (!(i < projects_array.length)) {
-              _context5.next = 37;
+              _context7.next = 37;
               break;
             }
 
@@ -56735,62 +56740,62 @@ function _update_project_list() {
 
           case 13:
             if (!(y < projects_array[i].metadata.image.length)) {
-              _context5.next = 31;
+              _context7.next = 31;
               break;
             }
 
             client = makeStorageClient();
             console.log(projects_array[i].metadata.image[y]);
-            _context5.next = 18;
+            _context7.next = 18;
             return client.get(projects_array[i].metadata.image[y]);
 
           case 18:
-            res = _context5.sent;
+            res = _context7.sent;
             console.log("Got a response! [".concat(res.status, "] ").concat(res.statusText));
 
             if (res.ok) {
-              _context5.next = 22;
+              _context7.next = 22;
               break;
             }
 
             throw new Error("failed to get" + projects_array[i].metadata.image[y]);
 
           case 22:
-            _context5.next = 24;
+            _context7.next = 24;
             return res.files();
 
           case 24:
-            files = _context5.sent;
+            files = _context7.sent;
             console.log(files);
-            _name = files[0].name;
-            img_link.push('https://' + projects_array[i].metadata.image[y] + '.ipfs.dweb.link/' + _name);
+            _name2 = files[0].name;
+            img_link.push('https://' + projects_array[i].metadata.image[y] + '.ipfs.dweb.link/' + _name2);
 
           case 28:
             y++;
-            _context5.next = 13;
+            _context7.next = 13;
             break;
 
           case 31:
             console.log('type_pro:');
             console.log(projects_array[i].status);
-            project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].status, projects_array[i].active);
+            project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].status, projects_array[i].active, projects_array[i].receiver);
 
           case 34:
             i++;
-            _context5.next = 10;
+            _context7.next = 10;
             break;
 
           case 37:
           case "end":
-            return _context5.stop();
+            return _context7.stop();
         }
       }
-    }, _callee5);
+    }, _callee7);
   }));
   return _update_project_list.apply(this, arguments);
 }
 
-function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active) {
+function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active, receiver) {
   console.log(active);
   var carusel = '';
   var card_body = '';
@@ -56830,19 +56835,19 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
   } else if (status == 1) {
     project_cart = '<div class="col"><div class="card shadow-sm"> ' + carusel;
   } else if (status == 3) {
-    project_cart = '<div class="col"><div class="card shadow-sm"> <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger bg-premium border border-light rounded-circle"><span class="visually-hidden">New alerts</span></span>' + carusel;
+    project_cart = '<div class="col"><div class="card shadow-sm"> <span class="position-absolute top-0 start-50 translate-middle p-2 bg-asocc"><span class="visually-hidden">New alerts</span></span>' + carusel;
   }
 
   card_body += '<div class = "card-body" > <p class = "card-text" >' + shortinfo + '</p> <div class = "progress"><div class="progress-bar bg-success" style="width:' + money / ammount * 100 + '%" role = "progressbar"  aria-valuemin = "0"  aria-valuemax = "' + ammount + '" aria-valuenow = "' + money + '">' + money + '</div></div><div class="pt-1 pb-3"><p class="alignleft">0</p><p class="alignright">' + ammount + '</p></div>';
 
   if (active == true) {
     if (days == 0) {
-      card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + hours + 'hours' + minute + 'minutes </small> </div > </div> </div>';
+      card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="view_pro(\'' + name + '\')"> View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="donate(\'' + name + '\',\'' + receiver + '\')" > Donate </button> </div ><small class = "text-muted" > ' + receiver + ' </small> <small class = "text-muted" >' + hours + 'hours' + minute + 'minutes </small> </div > </div> </div>';
     } else {
-      card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" > Donate </button> </div > <small class = "text-muted" >' + days + ' days ' + hours + ' hours </small> </div > </div> </div>';
+      card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="view_pro(\'' + name + '\')"> View </button> <button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="donate(\'' + name + '\',\'' + receiver + '\')" > Donate </button> </div > <small class = "text-muted" > ' + receiver + ' </small> <small class = "text-muted" >' + days + ' days ' + hours + ' hours </small> </div > </div> </div>';
     }
   } else {
-    card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" > View </button> </div > <small class = "text-muted" > "Found end" </small> </div > </div> </div>';
+    card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="view_pro(\'' + name + '\')"> View </button> </div > <small class = "text-muted" > ' + receiver + ' </small><small class = "text-muted" > "Found end" </small> </div > </div> </div>';
   }
 
   project_cart += card_body + '</div>';
@@ -56858,6 +56863,98 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
 var timerID = setInterval(function () {
   return update_project_list();
 }, 60000);
+var old_maxprice = 0;
+document.getElementById("near_donate_summ").onchange = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+  var index, i, max_price, nft_index, _i2, client, res, files, _name, img_src;
+
+  return regeneratorRuntime.wrap(function _callee$(_context) {
+    while (1) {
+      switch (_context.prev = _context.next) {
+        case 0:
+          for (i = 0; i < projects_array.length; i++) {
+            if (projects_array[i].project_name == document.getElementById("donate_pro_name").innerText) {
+              index = i;
+            }
+          }
+
+          max_price = 0;
+
+          for (_i2 = 0; _i2 < projects_array[index].nft_price.length; _i2++) {
+            if (document.getElementById("near_donate_summ").value > projects_array[index].nft_price[_i2]) {
+              if (projects_array[index].nft_price[_i2] > max_price) {
+                max_price = projects_array[index].nft_price[_i2];
+                nft_index = _i2;
+              }
+            }
+          }
+
+          if (!(max_price != old_maxprice)) {
+            _context.next = 21;
+            break;
+          }
+
+          document.getElementById("bonus-name-db").innerText = projects_array[index].nft_data[nft_index].title;
+          client = makeStorageClient();
+          console.log(projects_array[index].nft_data[nft_index].media);
+          _context.next = 9;
+          return client.get(projects_array[index].nft_data[nft_index].media);
+
+        case 9:
+          res = _context.sent;
+          console.log("Got a response! [".concat(res.status, "] ").concat(res.statusText));
+
+          if (res.ok) {
+            _context.next = 13;
+            break;
+          }
+
+          throw new Error("failed to get" + projects_array[index].nft_data[nft_index].media);
+
+        case 13:
+          _context.next = 15;
+          return res.files();
+
+        case 15:
+          files = _context.sent;
+          console.log(files);
+          _name = files[0].name;
+          img_src = 'https://' + projects_array[index].nft_data[nft_index].media + '.ipfs.dweb.link/' + _name;
+          document.getElementById("bonus-img").src = img_src;
+          old_maxprice = max_price;
+
+        case 21:
+        case "end":
+          return _context.stop();
+      }
+    }
+  }, _callee);
+}));
+document.getElementById("donate-btn").onclick = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
+  var donation_summ, proj_name, receiver;
+  return regeneratorRuntime.wrap(function _callee2$(_context2) {
+    while (1) {
+      switch (_context2.prev = _context2.next) {
+        case 0:
+          donation_summ = document.getElementById("near_donate_summ").value;
+          proj_name = document.getElementById("donate_pro_name").innerText;
+          receiver = document.getElementById("receiver_donate").innerText;
+          donation_summ = nearAPI.utils.format.parseNearAmount(donation_summ);
+          _context2.next = 6;
+          return window.contract.donate({
+            "receiver": receiver,
+            "projectname": proj_name
+          }, 300000000000000, donation_summ);
+
+        case 6:
+          document.getElementById("donateBox").style.display = "none";
+
+        case 7:
+        case "end":
+          return _context2.stop();
+      }
+    }
+  }, _callee2);
+}));
 
 function signedInFlow() {
   document.getElementById('sign-out').style.display = ' ';
@@ -56889,26 +56986,26 @@ function get_projects() {
 }
 
 function _get_projects() {
-  _get_projects = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6() {
+  _get_projects = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8() {
     var response;
-    return regeneratorRuntime.wrap(function _callee6$(_context6) {
+    return regeneratorRuntime.wrap(function _callee8$(_context8) {
       while (1) {
-        switch (_context6.prev = _context6.next) {
+        switch (_context8.prev = _context8.next) {
           case 0:
-            _context6.next = 2;
+            _context8.next = 2;
             return window.contract.get_donations();
 
           case 2:
-            response = _context6.sent;
+            response = _context8.sent;
             console.log(response);
-            return _context6.abrupt("return", response);
+            return _context8.abrupt("return", response);
 
           case 5:
           case "end":
-            return _context6.stop();
+            return _context8.stop();
         }
       }
-    }, _callee6);
+    }, _callee8);
   }));
   return _get_projects.apply(this, arguments);
 }
@@ -56920,11 +57017,11 @@ function add_donation(_x2, _x3, _x4, _x5, _x6, _x7) {
 }
 
 function _add_donation() {
-  _add_donation = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(amount, type_found, name, metadata, nft_data, nft_price) {
+  _add_donation = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(amount, type_found, name, metadata, nft_data, nft_price) {
     var account, balance;
-    return regeneratorRuntime.wrap(function _callee7$(_context7) {
+    return regeneratorRuntime.wrap(function _callee9$(_context9) {
       while (1) {
-        switch (_context7.prev = _context7.next) {
+        switch (_context9.prev = _context9.next) {
           case 0:
             console.log((0, _browserUtilInspect.default)({
               "amount": amount,
@@ -56937,27 +57034,27 @@ function _add_donation() {
             }));
 
             if (!document.getElementById("premium_check").checked) {
-              _context7.next = 15;
+              _context9.next = 15;
               break;
             }
 
-            _context7.next = 4;
+            _context9.next = 4;
             return window.walletAccount.account();
 
           case 4:
-            account = _context7.sent;
-            _context7.next = 7;
+            account = _context9.sent;
+            _context9.next = 7;
             return account.getAccountBalance();
 
           case 7:
-            balance = _context7.sent;
+            balance = _context9.sent;
 
             if (!(balance > premium_payment)) {
-              _context7.next = 13;
+              _context9.next = 13;
               break;
             }
 
-            _context7.next = 11;
+            _context9.next = 11;
             return window.contract.add_donation({
               "amount": amount,
               "receiver": window.accountId,
@@ -56969,15 +57066,15 @@ function _add_donation() {
             }, 300000000000000, premium_payment);
 
           case 11:
-            _context7.next = 13;
+            _context9.next = 13;
             break;
 
           case 13:
-            _context7.next = 17;
+            _context9.next = 17;
             break;
 
           case 15:
-            _context7.next = 17;
+            _context9.next = 17;
             return window.contract.add_donation({
               "amount": amount,
               "receiver": window.accountId,
@@ -56990,10 +57087,10 @@ function _add_donation() {
 
           case 17:
           case "end":
-            return _context7.stop();
+            return _context9.stop();
         }
       }
-    }, _callee7);
+    }, _callee9);
   }));
   return _add_donation.apply(this, arguments);
 }
@@ -57001,12 +57098,12 @@ function _add_donation() {
 var type_found, name, short_info, image_array, video, type_pro, tags, nft_number;
 var amount;
 var nft_image_array = [];
-document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
-  var image, nftName, nftPrice, NFT_Short_info, id_number, el, el1, el2, el3, i, pro_data_create, nft_data, _i2;
+document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3() {
+  var image, nftName, nftPrice, NFT_Short_info, id_number, el, el1, el2, el3, i, pro_data_create, nft_data, _i3;
 
-  return regeneratorRuntime.wrap(function _callee$(_context) {
+  return regeneratorRuntime.wrap(function _callee3$(_context3) {
     while (1) {
-      switch (_context.prev = _context.next) {
+      switch (_context3.prev = _context3.next) {
         case 0:
           name = document.getElementById("pro_name").value;
 
@@ -57025,11 +57122,11 @@ document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( 
           short_info = document.getElementById("floatingShortInfo").value;
           video = document.getElementById("formVideoURL").value;
           image = document.getElementsByName("image");
-          _context.next = 8;
+          _context3.next = 8;
           return load_to_nft_storage(image);
 
         case 8:
-          image_array = _context.sent;
+          image_array = _context3.sent;
           tags = document.getElementById("Project_tags").value;
           nft_number = document.getElementsByClassName("div_create_nft").length;
           nftName = [];
@@ -57042,7 +57139,7 @@ document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( 
           amount = Number(amount);
 
           if (!(nft_number > 0)) {
-            _context.next = 27;
+            _context3.next = 27;
             break;
           }
 
@@ -57058,11 +57155,11 @@ document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( 
             id_number.push(Number(0));
           }
 
-          _context.next = 26;
+          _context3.next = 26;
           return load_to_nft_storage(el1);
 
         case 26:
-          nft_image_array = _context.sent;
+          nft_image_array = _context3.sent;
 
         case 27:
           pro_data_create = {
@@ -57076,13 +57173,13 @@ document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( 
           nft_data = [];
 
           if (nft_number > 0) {
-            for (_i2 = 0; _i2 < nft_number; _i2++) {
+            for (_i3 = 0; _i3 < nft_number; _i3++) {
               nft_data.push({
-                "title": nftName[_i2],
+                "title": nftName[_i3],
                 // ex. "Arch Nemesis: Mail Carrier" or "Parcel #5055"
-                "description": NFT_Short_info[_i2],
+                "description": NFT_Short_info[_i3],
                 // free-form description
-                "media": nft_image_array[_i2],
+                "media": nft_image_array[_i3],
                 // URL to associated media, preferably to decentralized, content-addressed storage
                 "media_hash": null,
                 // Base64-encoded sha256 hash of content referenced by the `media` field. Required if `media` is included.
@@ -57120,15 +57217,20 @@ document.getElementById("create_btn").onclick = /*#__PURE__*/_asyncToGenerator( 
               let file_cid = await storeFiles(files);*/
 
 
-          _context.next = 32;
+          _context3.next = 32;
           return add_donation(amount, type_found, name, pro_data_create, nft_data, nftPrice);
 
         case 32:
+          document.getElementById("create_pro").style.display = "none";
+          document.getElementById("create_page").style.display = "block";
+          document.getElementById("pro_name").innerHTML = name;
+
+        case 35:
         case "end":
-          return _context.stop();
+          return _context3.stop();
       }
     }
-  }, _callee);
+  }, _callee3);
 }));
 
 function load_to_nft_storage(_x8) {
@@ -57136,49 +57238,49 @@ function load_to_nft_storage(_x8) {
 }
 
 function _load_to_nft_storage() {
-  _load_to_nft_storage = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(image) {
+  _load_to_nft_storage = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(image) {
     var img_array, i, img, cid;
-    return regeneratorRuntime.wrap(function _callee8$(_context8) {
+    return regeneratorRuntime.wrap(function _callee10$(_context10) {
       while (1) {
-        switch (_context8.prev = _context8.next) {
+        switch (_context10.prev = _context10.next) {
           case 0:
             img_array = [];
             i = 0;
 
           case 2:
             if (!(i < image.length)) {
-              _context8.next = 11;
+              _context10.next = 11;
               break;
             }
 
             img = image[i].files;
-            _context8.next = 6;
+            _context10.next = 6;
             return storeFiles(img);
 
           case 6:
-            cid = _context8.sent;
+            cid = _context10.sent;
             img_array.push(cid);
 
           case 8:
             i++;
-            _context8.next = 2;
+            _context10.next = 2;
             break;
 
           case 11:
-            return _context8.abrupt("return", img_array);
+            return _context10.abrupt("return", img_array);
 
           case 12:
           case "end":
-            return _context8.stop();
+            return _context10.stop();
         }
       }
-    }, _callee8);
+    }, _callee10);
   }));
   return _load_to_nft_storage.apply(this, arguments);
 }
 
 window.nearInitPromise = initContract().then(doWork).catch(console.error);
-},{"regenerator-runtime/runtime":"../node_modules/regenerator-runtime/runtime.js","near-api-js":"../node_modules/near-api-js/lib/browser-index.js","./main_page.js":"js/main_page.js","web3.storage/dist/bundle.esm.min.js":"../node_modules/web3.storage/dist/bundle.esm.min.js","browser-util-inspect":"../node_modules/browser-util-inspect/index.js","ipfs-http-client":"../node_modules/ipfs-http-client/cjs/src/index.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"regenerator-runtime/runtime":"../node_modules/regenerator-runtime/runtime.js","near-api-js":"../node_modules/near-api-js/lib/browser-index.js","./main_page.js":"js/main_page.js","web3.storage/dist/bundle.esm.min.js":"../node_modules/web3.storage/dist/bundle.esm.min.js","browser-util-inspect":"../node_modules/browser-util-inspect/index.js","ipfs-http-client":"../node_modules/ipfs-http-client/cjs/src/index.js","near-api-js/lib/validators":"../node_modules/near-api-js/lib/validators.js","fs":"../node_modules/parcel-bundler/src/builtins/_empty.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -57206,7 +57308,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "37391" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "33955" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

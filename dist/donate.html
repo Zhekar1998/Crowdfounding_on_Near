@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Crowndfounding on Near</title>
+    <link href="/bootstrap.8fed14c2.css" type="text/css" rel="stylesheet">
+
+
+    <script src="/bootstrap.bundle.min.b066ac09.js"></script>
+    <style>.bd-placeholder-img {
+            font-size: 1.125rem;
+            text-anchor: middle;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+        
+        @media (min-width: 768px) {
+            .bd-placeholder-img-lg {
+                font-size: 3.5rem;
+            }
+        }</style>
+    <link href="/modals.a49a3a1b.css" type="text/css" rel="stylesheet">
+</head>
+
+<body>
+    <header class="p-3 bg-dark text-white">
+        <div class="container">
+            <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+                <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none">
+                    <svg class="bi me-2" width="40" height="32" role="img" aria-label="Bootstrap"><use xlink:href="#bootstrap"></use></svg>
+                </a>
+
+                <ul id="topnav" class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                    <li><a href="#commertial" class="navbtn nav-link px-2 text-secondary">Commertial</a></li>
+                    <li><a href="#nonProfit" class="navbtn nav-link px-2 text-white">NonProfit</a></li>
+                    <li><a href="#price" class="navbtn nav-link px-2 text-white">Pricing</a></li>
+                    <li><a href="#faq" class="navbtn nav-link px-2 text-white">FAQs</a></li>
+                    <li><a href="#about" class="navbtn nav-link px-2 text-white">About</a></li>
+                    <li><a href="#" id="create_project_modal" class="nav-link px-2 text-white">Create Project</a> </li>
+                </ul>
+
+                <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-lg-3">
+                    <input type="search" class="form-control form-control-dark" placeholder="Search..." aria-label="Search">
+                </form>
+                <a id="account_id" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none signed-out"></a>
+                <div class="text-end">
+                    <button type="button" id="sign-in" class="btn btn-outline-light me-2 signed-in">Login with NEAR</button>
+
+                    <button type="button" id="sign-out" class="btn btn-outline-light me-2 signed-out">Sign out from NEAR</button>
+                </div>
+            </div>
+        </div>
+        <script>topnav.onclick = function (event) {
+  if (event.target.nodeName != 'A') return;
+
+  if (event.target.classList.contains('navbtn')) {
+    var href = event.target.getAttribute('href');
+    menubtnarr = document.getElementsByClassName('navbtn');
+
+    for (var i = 0; i < menubtnarr.length; i++) {
+      thishref = menubtnarr[i].getAttribute('href');
+
+      if (thishref != href) {
+        menubtnarr[i].classList.remove("text-secondary");
+        menubtnarr[i].classList.add("text-white");
+        console.log('1: ' + thishref);
+        thishref = thishref.replace('#', '');
+        console.log('2: ' + thishref);
+        document.getElementById(thishref).style.display = 'none';
+      } else {
+        menubtnarr[i].classList.add("text-secondary");
+        menubtnarr[i].classList.remove("text-white");
+        console.log(thishref);
+        thishref = thishref.replace('#', '');
+        document.getElementById(thishref).style.display = 'block';
+      }
+    }
+  }
+};</script>
+    </header>
+
+
+
+    <main>
+        <div id="donate_for_us" style="display: block;">
+            <section class="py-5 text-center container">
+                <div class="row py-lg-5 bg-ukraine">
+                    <div class="col-lg-6 col-md-8 mx-auto">
+                        <h1 class="fw-light">Album example</h1>
+                        <p class="lead text-muted">Something short and leading about the collection below—its contents, the creator, etc. Make it short and sweet, but not too short so folks don’t simply skip over it entirely.</p>
+                        <button id="login">Login to mainnet</button>
+                        <form>
+                            <label for="Near_amount" class="form-label">Donate summ</label>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">$NEAR</span>
+                                <input id="Near_amount" type="number" class="form-control rounded-4" aria-label="Amount (on Near)">
+                            </div>
+                            <button id="login">Donate</button>
+                        </form>
+
+
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    <footer class="text-muted py-5">
+        <div class="container">
+            <p class="float-end mb-1">
+                <a href="#">Back to top</a>
+            </p>
+            <p class="mb-1">Album example is &copy; Bootstrap, but please download and customize it for yourself!</p>
+
+        </div>
+    </footer>
+</body></html>

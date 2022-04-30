@@ -21,7 +21,7 @@ pub const CREATOR_ROYALTY_ID: &str ="ylukatsky.testnet";
 pub const CREATOR_ROYALTY: u128 = 1;
 pub const ROYALTY_ID: &str = "us_association.testnet";
 pub const ROYALTY: u128 = 4;
-pub const NFTCONTRACT: &str = "nft.crowndfounding.testnet";
+pub const NFTCONTRACT: &str = "nft.crowndfound.testnet";
 #[ext_contract(ext_staking_pool)]
 pub trait ExtUser {
     fn send(&mut self, amount: u128);
@@ -158,9 +158,10 @@ impl Donation {
                 });
                 if i>(-1){
                     let b: usize = i as usize;
+                    log!(b.to_string());
                     Promise::new(AccountId::new_unchecked(String::from(NFTCONTRACT).clone())).function_call(
                         "nft_mint".to_string(),
-                        json!({"token_id" : el.project_name+&el.donate_base.len().to_string(), "receiver_id": env::signer_account_id(), "metadata": el.nft_data[b]}).to_string().into_bytes(),
+                        json!({"token_id" : el.project_name+&el.donate_base.len().to_string(), "receiver_id": env::signer_account_id(), "token_metadata": el.nft_data[b]}).to_string().into_bytes(),
                          10_000_000_000_000_000_000_000,
                         near_sdk::Gas(5_000_000_000_000));
                 }

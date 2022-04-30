@@ -52,6 +52,20 @@
     animation-duration: 0.4s
 }
 
+.modal-textedit {
+    width: 70vw;
+    transition: bottom .75s ease-in-out;
+    background-color: #fefefe;
+    margin: auto;
+    padding: 0;
+    border: 1px solid #888;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s
+}
+
 @-webkit-keyframes animatetop {
     from {
         top: -300px;
@@ -118,4 +132,16 @@
     height: 56px;
     width: 56px;
     z-index: 1;
+}
+
+.bg-asocc {
+    background-image: url(img/rsz_3-removebg-preview.png);
+    height: 56px;
+    width: 56px;
+    z-index: 1;
+}
+
+.bg-ukraine {
+    background: url(img//sl_032922_49370_45.jpg) 100% 50% no-repeat;
+    background-size: cover;
 }
