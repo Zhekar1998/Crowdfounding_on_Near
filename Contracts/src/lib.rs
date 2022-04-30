@@ -146,10 +146,11 @@ impl Donation {
             env::attached_deposit(),
             receiver
         );
-        // self.dontaions.push(DonationItem { amount, receiver, donated: 0 });
+        
          self.donations.iter().for_each(|mut el| {
             if el.receiver == receiver && el.project_name == projectname {
                 el.donated += env::attached_deposit();
+                log!(el.donated.to_string());
                 let mut i:i8 = -1;
                 el.nft_price.iter_mut().for_each(|price|{
                     if env::attached_deposit()> price.clone() {
