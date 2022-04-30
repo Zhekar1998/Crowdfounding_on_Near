@@ -84,6 +84,8 @@ document.getElementById("floatingShortInfo").onchange = function() {
 
 }
 
+
+
 document.getElementById("remove_img_btn").onclick = function() {
     let div_list = document.getElementsByName("image");
 
