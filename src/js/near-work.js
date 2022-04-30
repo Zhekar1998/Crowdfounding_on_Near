@@ -114,6 +114,7 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
     console.log('image:');
     console.log(img.length);
     ammount = ammount / Math.pow(10, 24);
+    money = money / Math.pow(10, 24);
     console.log(time);
     time = time / 1000000000;
     let days = Math.floor(time / 86400);

@@ -47,7 +47,7 @@ pub struct DonationItem {
     active: bool
 }
 
-#[derive(Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Metadata {
     name: String,
@@ -93,7 +93,7 @@ pub struct AssociationMember{
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
 
 pub struct Donation {
-    donations: Vector<DonationItem>,
+    donations: Vec<DonationItem>,
     association: Vector<AssociationMember>
 }
 
@@ -101,7 +101,7 @@ pub struct Donation {
 impl Donation {
     #[init]
     pub fn new() -> Self {
-        let this = Self { donations: Vector::new(b"d"), association: Vector::new(b"a") };
+        let this = Self { donations: Vec::new(), association: Vector::new(b"a") };
         this
     }
     #[payable]
@@ -119,7 +119,7 @@ impl Donation {
                 if assoc {status_var = 3;}else {status_var = 1;}
         }
 
-        self.donations.push( &DonationItem {
+        self.donations.push( DonationItem {
             amount: amount * 10u128.pow(24),
             receiver,
             project_name: projectname,
@@ -147,7 +147,7 @@ impl Donation {
             receiver
         );
         
-         self.donations.iter().for_each(|mut el| {
+         self.donations.iter_mut().for_each(|el| {
             if el.receiver == receiver && el.project_name == projectname {
                 el.donated += env::attached_deposit();
                 log!(el.donated.to_string());
@@ -162,7 +162,7 @@ impl Donation {
                     log!(b.to_string());
                     Promise::new(AccountId::new_unchecked(String::from(NFTCONTRACT).clone())).function_call(
                         "nft_mint".to_string(),
-                        json!({"token_id" : el.project_name+&el.donate_base.len().to_string(), "receiver_id": env::signer_account_id(), "token_metadata": el.nft_data[b]}).to_string().into_bytes(),
+                        json!({"token_id" : el.project_name.clone()+&el.donate_base.len().to_string(), "receiver_id": env::signer_account_id(), "token_metadata": el.nft_data[b]}).to_string().into_bytes(),
                          10_000_000_000_000_000_000_000,
                         near_sdk::Gas(5_000_000_000_000));
                 }
@@ -209,19 +209,19 @@ impl Donation {
         true
     }
 
-    pub fn get_donations(&self) -> Vec<DonationItemView> {
+    pub fn get_donations(self) -> Vec<DonationItemView> {
         self.donations
             .iter()
             .map(|el| DonationItemView {
                 amount: el.amount,
                 donated: el.donated,
                 receiver: el.receiver.clone(),
-                project_name: el.project_name,
+                project_name: el.project_name.clone(),
                 time_past: 2592000000000000-(env::block_timestamp()-el.create_time),
-                metadata: el.metadata,
+                metadata: el.metadata.clone(),
                 status: el.status,
-                nft_data: el.nft_data,
-                nft_price: el.nft_price,
+                nft_data: el.nft_data.clone(),
+                nft_price: el.nft_price.clone(),
                 active: el.active})
             .collect()
     }
