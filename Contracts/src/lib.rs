@@ -214,10 +214,10 @@ impl Donation {
             .iter()
             .map(|el| DonationItemView {
                 amount: el.amount,
-                donated: el.donated,
+                donated: el.donated,                    //10^24YoctoNear = 1Near
                 receiver: el.receiver.clone(),
                 project_name: el.project_name.clone(),
-                time_past: 2592000000000000-(env::block_timestamp()-el.create_time),
+                time_past: 2592000000000000-(env::block_timestamp()-el.create_time),//nano seconds (10^9 nanosec=1sec)
                 metadata: el.metadata.clone(),
                 status: el.status,
                 nft_data: el.nft_data.clone(),
