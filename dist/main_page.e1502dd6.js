@@ -949,6 +949,18 @@ document.getElementById("btn-close-pro-create").onclick = function () {
   document.getElementById("create_pro").style.display = "none";
 };
 
+document.getElementById("btn-close_singin").onclick = function () {
+  document.getElementById("modalSignIn").style.display = "none";
+};
+
+document.getElementById("btn-close_donateBox").onclick = function () {
+  document.getElementById("donateBox").style.display = "none";
+};
+
+document.getElementById("btn-close_createpage").onclick = function () {
+  document.getElementById("create_page").style.display = "none";
+};
+
 var img_number = 1;
 
 document.getElementById("add_img_btn").onclick = function () {
@@ -1068,7 +1080,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "33955" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "39365" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

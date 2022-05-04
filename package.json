@@ -23,6 +23,7 @@
         "babel-cli": "^6.26.0",
         "babel-preset-react-app": "^3.1.2",
         "browser-util-inspect": "^0.2.0",
+        "grapesjs": "^0.18.4",
         "ipfs-car": "^0.6.1",
         "ipfs-http-client": "^56.0.3",
         "log-to-file": "^3.0.0",

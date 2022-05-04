@@ -7072,93 +7072,102 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
+},{}],"../node_modules/isarray/index.js":[function(require,module,exports) {
+var toString = {}.toString;
+
+module.exports = Array.isArray || function (arr) {
+  return toString.call(arr) == '[object Array]';
+};
+
 },{}],"../node_modules/buffer/index.js":[function(require,module,exports) {
 
+var global = arguments[3];
 /*!
  * The buffer module from node.js, for the browser.
  *
- * @author   Feross Aboukhadijeh <https://feross.org>
+ * @author   Feross Aboukhadijeh <http://feross.org>
  * @license  MIT
  */
 /* eslint-disable no-proto */
 
 'use strict'
 
-const base64 = require('base64-js')
-const ieee754 = require('ieee754')
-const customInspectSymbol =
-  (typeof Symbol === 'function' && typeof Symbol['for'] === 'function') // eslint-disable-line dot-notation
-    ? Symbol['for']('nodejs.util.inspect.custom') // eslint-disable-line dot-notation
-    : null
+var base64 = require('base64-js')
+var ieee754 = require('ieee754')
+var isArray = require('isarray')
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
 exports.INSPECT_MAX_BYTES = 50
 
-const K_MAX_LENGTH = 0x7fffffff
-exports.kMaxLength = K_MAX_LENGTH
-
 /**
  * If `Buffer.TYPED_ARRAY_SUPPORT`:
  *   === true    Use Uint8Array implementation (fastest)
- *   === false   Print warning and recommend using `buffer` v4.x which has an Object
- *               implementation (most compatible, even IE6)
+ *   === false   Use Object implementation (most compatible, even IE6)
  *
  * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
  * Opera 11.6+, iOS 4.2+.
  *
- * We report that the browser does not support typed arrays if the are not subclassable
- * using __proto__. Firefox 4-29 lacks support for adding new properties to `Uint8Array`
- * (See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438). IE 10 lacks support
- * for __proto__ and has a buggy typed array implementation.
- */
-Buffer.TYPED_ARRAY_SUPPORT = typedArraySupport()
+ * Due to various browser bugs, sometimes the Object implementation will be used even
+ * when the browser supports typed arrays.
+ *
+ * Note:
+ *
+ *   - Firefox 4-29 lacks support for adding new properties to `Uint8Array` instances,
+ *     See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438.
+ *
+ *   - Chrome 9-10 is missing the `TypedArray.prototype.subarray` function.
+ *
+ *   - IE10 has a broken `TypedArray.prototype.subarray` function which returns arrays of
+ *     incorrect length in some situations.
 
-if (!Buffer.TYPED_ARRAY_SUPPORT && typeof console !== 'undefined' &&
-    typeof console.error === 'function') {
-  console.error(
-    'This browser lacks typed array (Uint8Array) support which is required by ' +
-    '`buffer` v5.x. Use `buffer` v4.x if you require old browser support.'
-  )
-}
+ * We detect these buggy browsers and set `Buffer.TYPED_ARRAY_SUPPORT` to `false` so they
+ * get the Object implementation, which is slower but behaves correctly.
+ */
+Buffer.TYPED_ARRAY_SUPPORT = global.TYPED_ARRAY_SUPPORT !== undefined
+  ? global.TYPED_ARRAY_SUPPORT
+  : typedArraySupport()
+
+/*
+ * Export kMaxLength after typed array support is determined.
+ */
+exports.kMaxLength = kMaxLength()
 
 function typedArraySupport () {
-  // Can typed array instances can be augmented?
   try {
-    const arr = new Uint8Array(1)
-    const proto = { foo: function () { return 42 } }
-    Object.setPrototypeOf(proto, Uint8Array.prototype)
-    Object.setPrototypeOf(arr, proto)
-    return arr.foo() === 42
+    var arr = new Uint8Array(1)
+    arr.__proto__ = {__proto__: Uint8Array.prototype, foo: function () { return 42 }}
+    return arr.foo() === 42 && // typed array instances can be augmented
+        typeof arr.subarray === 'function' && // chrome 9-10 lack `subarray`
+        arr.subarray(1, 1).byteLength === 0 // ie10 has broken `subarray`
   } catch (e) {
     return false
   }
 }
 
-Object.defineProperty(Buffer.prototype, 'parent', {
-  enumerable: true,
-  get: function () {
-    if (!Buffer.isBuffer(this)) return undefined
-    return this.buffer
-  }
-})
+function kMaxLength () {
+  return Buffer.TYPED_ARRAY_SUPPORT
+    ? 0x7fffffff
+    : 0x3fffffff
+}
 
-Object.defineProperty(Buffer.prototype, 'offset', {
-  enumerable: true,
-  get: function () {
-    if (!Buffer.isBuffer(this)) return undefined
-    return this.byteOffset
+function createBuffer (that, length) {
+  if (kMaxLength() < length) {
+    throw new RangeError('Invalid typed array length')
   }
-})
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    // Return an augmented `Uint8Array` instance, for best performance
+    that = new Uint8Array(length)
+    that.__proto__ = Buffer.prototype
+  } else {
+    // Fallback: Return an object instance of the Buffer class
+    if (that === null) {
+      that = new Buffer(length)
+    }
+    that.length = length
+  }
 
-function createBuffer (length) {
-  if (length > K_MAX_LENGTH) {
-    throw new RangeError('The value "' + length + '" is invalid for option "size"')
-  }
-  // Return an augmented `Uint8Array` instance
-  const buf = new Uint8Array(length)
-  Object.setPrototypeOf(buf, Buffer.prototype)
-  return buf
+  return that
 }
 
 /**
@@ -7172,70 +7181,44 @@ function createBuffer (length) {
  */
 
 function Buffer (arg, encodingOrOffset, length) {
+  if (!Buffer.TYPED_ARRAY_SUPPORT && !(this instanceof Buffer)) {
+    return new Buffer(arg, encodingOrOffset, length)
+  }
+
   // Common case.
   if (typeof arg === 'number') {
     if (typeof encodingOrOffset === 'string') {
-      throw new TypeError(
-        'The "string" argument must be of type string. Received type number'
+      throw new Error(
+        'If encoding is specified then the first argument must be a string'
       )
     }
-    return allocUnsafe(arg)
+    return allocUnsafe(this, arg)
   }
-  return from(arg, encodingOrOffset, length)
+  return from(this, arg, encodingOrOffset, length)
 }
 
 Buffer.poolSize = 8192 // not used by this implementation
 
-function from (value, encodingOrOffset, length) {
-  if (typeof value === 'string') {
-    return fromString(value, encodingOrOffset)
-  }
+// TODO: Legacy, not needed anymore. Remove in next major version.
+Buffer._augment = function (arr) {
+  arr.__proto__ = Buffer.prototype
+  return arr
+}
 
-  if (ArrayBuffer.isView(value)) {
-    return fromArrayView(value)
-  }
-
-  if (value == null) {
-    throw new TypeError(
-      'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
-      'or Array-like Object. Received type ' + (typeof value)
-    )
-  }
-
-  if (isInstance(value, ArrayBuffer) ||
-      (value && isInstance(value.buffer, ArrayBuffer))) {
-    return fromArrayBuffer(value, encodingOrOffset, length)
-  }
-
-  if (typeof SharedArrayBuffer !== 'undefined' &&
-      (isInstance(value, SharedArrayBuffer) ||
-      (value && isInstance(value.buffer, SharedArrayBuffer)))) {
-    return fromArrayBuffer(value, encodingOrOffset, length)
-  }
-
+function from (that, value, encodingOrOffset, length) {
   if (typeof value === 'number') {
-    throw new TypeError(
-      'The "value" argument must not be of type number. Received type number'
-    )
+    throw new TypeError('"value" argument must not be a number')
   }
 
-  const valueOf = value.valueOf && value.valueOf()
-  if (valueOf != null && valueOf !== value) {
-    return Buffer.from(valueOf, encodingOrOffset, length)
+  if (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer) {
+    return fromArrayBuffer(that, value, encodingOrOffset, length)
   }
 
-  const b = fromObject(value)
-  if (b) return b
-
-  if (typeof Symbol !== 'undefined' && Symbol.toPrimitive != null &&
-      typeof value[Symbol.toPrimitive] === 'function') {
-    return Buffer.from(value[Symbol.toPrimitive]('string'), encodingOrOffset, length)
+  if (typeof value === 'string') {
+    return fromString(that, value, encodingOrOffset)
   }
 
-  throw new TypeError(
-    'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
-    'or Array-like Object. Received type ' + (typeof value)
-  )
+  return fromObject(that, value)
 }
 
 /**
@@ -7247,36 +7230,44 @@ function from (value, encodingOrOffset, length) {
  * Buffer.from(arrayBuffer[, byteOffset[, length]])
  **/
 Buffer.from = function (value, encodingOrOffset, length) {
-  return from(value, encodingOrOffset, length)
+  return from(null, value, encodingOrOffset, length)
 }
 
-// Note: Change prototype *after* Buffer.from is defined to workaround Chrome bug:
-// https://github.com/feross/buffer/pull/148
-Object.setPrototypeOf(Buffer.prototype, Uint8Array.prototype)
-Object.setPrototypeOf(Buffer, Uint8Array)
-
-function assertSize (size) {
-  if (typeof size !== 'number') {
-    throw new TypeError('"size" argument must be of type number')
-  } else if (size < 0) {
-    throw new RangeError('The value "' + size + '" is invalid for option "size"')
+if (Buffer.TYPED_ARRAY_SUPPORT) {
+  Buffer.prototype.__proto__ = Uint8Array.prototype
+  Buffer.__proto__ = Uint8Array
+  if (typeof Symbol !== 'undefined' && Symbol.species &&
+      Buffer[Symbol.species] === Buffer) {
+    // Fix subarray() in ES2016. See: https://github.com/feross/buffer/pull/97
+    Object.defineProperty(Buffer, Symbol.species, {
+      value: null,
+      configurable: true
+    })
   }
 }
 
-function alloc (size, fill, encoding) {
+function assertSize (size) {
+  if (typeof size !== 'number') {
+    throw new TypeError('"size" argument must be a number')
+  } else if (size < 0) {
+    throw new RangeError('"size" argument must not be negative')
+  }
+}
+
+function alloc (that, size, fill, encoding) {
   assertSize(size)
   if (size <= 0) {
-    return createBuffer(size)
+    return createBuffer(that, size)
   }
   if (fill !== undefined) {
     // Only pay attention to encoding if it's a string. This
     // prevents accidentally sending in a number that would
-    // be interpreted as a start offset.
+    // be interpretted as a start offset.
     return typeof encoding === 'string'
-      ? createBuffer(size).fill(fill, encoding)
-      : createBuffer(size).fill(fill)
+      ? createBuffer(that, size).fill(fill, encoding)
+      : createBuffer(that, size).fill(fill)
   }
-  return createBuffer(size)
+  return createBuffer(that, size)
 }
 
 /**
@@ -7284,123 +7275,132 @@ function alloc (size, fill, encoding) {
  * alloc(size[, fill[, encoding]])
  **/
 Buffer.alloc = function (size, fill, encoding) {
-  return alloc(size, fill, encoding)
+  return alloc(null, size, fill, encoding)
 }
 
-function allocUnsafe (size) {
+function allocUnsafe (that, size) {
   assertSize(size)
-  return createBuffer(size < 0 ? 0 : checked(size) | 0)
+  that = createBuffer(that, size < 0 ? 0 : checked(size) | 0)
+  if (!Buffer.TYPED_ARRAY_SUPPORT) {
+    for (var i = 0; i < size; ++i) {
+      that[i] = 0
+    }
+  }
+  return that
 }
 
 /**
  * Equivalent to Buffer(num), by default creates a non-zero-filled Buffer instance.
  * */
 Buffer.allocUnsafe = function (size) {
-  return allocUnsafe(size)
+  return allocUnsafe(null, size)
 }
 /**
  * Equivalent to SlowBuffer(num), by default creates a non-zero-filled Buffer instance.
  */
 Buffer.allocUnsafeSlow = function (size) {
-  return allocUnsafe(size)
+  return allocUnsafe(null, size)
 }
 
-function fromString (string, encoding) {
+function fromString (that, string, encoding) {
   if (typeof encoding !== 'string' || encoding === '') {
     encoding = 'utf8'
   }
 
   if (!Buffer.isEncoding(encoding)) {
-    throw new TypeError('Unknown encoding: ' + encoding)
+    throw new TypeError('"encoding" must be a valid string encoding')
   }
 
-  const length = byteLength(string, encoding) | 0
-  let buf = createBuffer(length)
+  var length = byteLength(string, encoding) | 0
+  that = createBuffer(that, length)
 
-  const actual = buf.write(string, encoding)
+  var actual = that.write(string, encoding)
 
   if (actual !== length) {
     // Writing a hex string, for example, that contains invalid characters will
     // cause everything after the first invalid character to be ignored. (e.g.
     // 'abxxcd' will be treated as 'ab')
-    buf = buf.slice(0, actual)
+    that = that.slice(0, actual)
   }
 
-  return buf
+  return that
 }
 
-function fromArrayLike (array) {
-  const length = array.length < 0 ? 0 : checked(array.length) | 0
-  const buf = createBuffer(length)
-  for (let i = 0; i < length; i += 1) {
-    buf[i] = array[i] & 255
+function fromArrayLike (that, array) {
+  var length = array.length < 0 ? 0 : checked(array.length) | 0
+  that = createBuffer(that, length)
+  for (var i = 0; i < length; i += 1) {
+    that[i] = array[i] & 255
   }
-  return buf
+  return that
 }
 
-function fromArrayView (arrayView) {
-  if (isInstance(arrayView, Uint8Array)) {
-    const copy = new Uint8Array(arrayView)
-    return fromArrayBuffer(copy.buffer, copy.byteOffset, copy.byteLength)
-  }
-  return fromArrayLike(arrayView)
-}
+function fromArrayBuffer (that, array, byteOffset, length) {
+  array.byteLength // this throws if `array` is not a valid ArrayBuffer
 
-function fromArrayBuffer (array, byteOffset, length) {
   if (byteOffset < 0 || array.byteLength < byteOffset) {
-    throw new RangeError('"offset" is outside of buffer bounds')
+    throw new RangeError('\'offset\' is out of bounds')
   }
 
   if (array.byteLength < byteOffset + (length || 0)) {
-    throw new RangeError('"length" is outside of buffer bounds')
+    throw new RangeError('\'length\' is out of bounds')
   }
 
-  let buf
   if (byteOffset === undefined && length === undefined) {
-    buf = new Uint8Array(array)
+    array = new Uint8Array(array)
   } else if (length === undefined) {
-    buf = new Uint8Array(array, byteOffset)
+    array = new Uint8Array(array, byteOffset)
   } else {
-    buf = new Uint8Array(array, byteOffset, length)
+    array = new Uint8Array(array, byteOffset, length)
   }
 
-  // Return an augmented `Uint8Array` instance
-  Object.setPrototypeOf(buf, Buffer.prototype)
-
-  return buf
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    // Return an augmented `Uint8Array` instance, for best performance
+    that = array
+    that.__proto__ = Buffer.prototype
+  } else {
+    // Fallback: Return an object instance of the Buffer class
+    that = fromArrayLike(that, array)
+  }
+  return that
 }
 
-function fromObject (obj) {
+function fromObject (that, obj) {
   if (Buffer.isBuffer(obj)) {
-    const len = checked(obj.length) | 0
-    const buf = createBuffer(len)
+    var len = checked(obj.length) | 0
+    that = createBuffer(that, len)
 
-    if (buf.length === 0) {
-      return buf
+    if (that.length === 0) {
+      return that
     }
 
-    obj.copy(buf, 0, 0, len)
-    return buf
+    obj.copy(that, 0, 0, len)
+    return that
   }
 
-  if (obj.length !== undefined) {
-    if (typeof obj.length !== 'number' || numberIsNaN(obj.length)) {
-      return createBuffer(0)
+  if (obj) {
+    if ((typeof ArrayBuffer !== 'undefined' &&
+        obj.buffer instanceof ArrayBuffer) || 'length' in obj) {
+      if (typeof obj.length !== 'number' || isnan(obj.length)) {
+        return createBuffer(that, 0)
+      }
+      return fromArrayLike(that, obj)
     }
-    return fromArrayLike(obj)
+
+    if (obj.type === 'Buffer' && isArray(obj.data)) {
+      return fromArrayLike(that, obj.data)
+    }
   }
 
-  if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
-    return fromArrayLike(obj.data)
-  }
+  throw new TypeError('First argument must be a string, Buffer, ArrayBuffer, Array, or array-like object.')
 }
 
 function checked (length) {
-  // Note: cannot use `length < K_MAX_LENGTH` here because that fails when
+  // Note: cannot use `length < kMaxLength()` here because that fails when
   // length is NaN (which is otherwise coerced to zero.)
-  if (length >= K_MAX_LENGTH) {
+  if (length >= kMaxLength()) {
     throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
-                         'size: 0x' + K_MAX_LENGTH.toString(16) + ' bytes')
+                         'size: 0x' + kMaxLength().toString(16) + ' bytes')
   }
   return length | 0
 }
@@ -7413,25 +7413,20 @@ function SlowBuffer (length) {
 }
 
 Buffer.isBuffer = function isBuffer (b) {
-  return b != null && b._isBuffer === true &&
-    b !== Buffer.prototype // so Buffer.isBuffer(Buffer.prototype) will be false
+  return !!(b != null && b._isBuffer)
 }
 
 Buffer.compare = function compare (a, b) {
-  if (isInstance(a, Uint8Array)) a = Buffer.from(a, a.offset, a.byteLength)
-  if (isInstance(b, Uint8Array)) b = Buffer.from(b, b.offset, b.byteLength)
   if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) {
-    throw new TypeError(
-      'The "buf1", "buf2" arguments must be one of type Buffer or Uint8Array'
-    )
+    throw new TypeError('Arguments must be Buffers')
   }
 
   if (a === b) return 0
 
-  let x = a.length
-  let y = b.length
+  var x = a.length
+  var y = b.length
 
-  for (let i = 0, len = Math.min(x, y); i < len; ++i) {
+  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
     if (a[i] !== b[i]) {
       x = a[i]
       y = b[i]
@@ -7464,7 +7459,7 @@ Buffer.isEncoding = function isEncoding (encoding) {
 }
 
 Buffer.concat = function concat (list, length) {
-  if (!Array.isArray(list)) {
+  if (!isArray(list)) {
     throw new TypeError('"list" argument must be an Array of Buffers')
   }
 
@@ -7472,7 +7467,7 @@ Buffer.concat = function concat (list, length) {
     return Buffer.alloc(0)
   }
 
-  let i
+  var i
   if (length === undefined) {
     length = 0
     for (i = 0; i < list.length; ++i) {
@@ -7480,26 +7475,14 @@ Buffer.concat = function concat (list, length) {
     }
   }
 
-  const buffer = Buffer.allocUnsafe(length)
-  let pos = 0
+  var buffer = Buffer.allocUnsafe(length)
+  var pos = 0
   for (i = 0; i < list.length; ++i) {
-    let buf = list[i]
-    if (isInstance(buf, Uint8Array)) {
-      if (pos + buf.length > buffer.length) {
-        if (!Buffer.isBuffer(buf)) buf = Buffer.from(buf)
-        buf.copy(buffer, pos)
-      } else {
-        Uint8Array.prototype.set.call(
-          buffer,
-          buf,
-          pos
-        )
-      }
-    } else if (!Buffer.isBuffer(buf)) {
+    var buf = list[i]
+    if (!Buffer.isBuffer(buf)) {
       throw new TypeError('"list" argument must be an Array of Buffers')
-    } else {
-      buf.copy(buffer, pos)
     }
+    buf.copy(buffer, pos)
     pos += buf.length
   }
   return buffer
@@ -7509,22 +7492,19 @@ function byteLength (string, encoding) {
   if (Buffer.isBuffer(string)) {
     return string.length
   }
-  if (ArrayBuffer.isView(string) || isInstance(string, ArrayBuffer)) {
+  if (typeof ArrayBuffer !== 'undefined' && typeof ArrayBuffer.isView === 'function' &&
+      (ArrayBuffer.isView(string) || string instanceof ArrayBuffer)) {
     return string.byteLength
   }
   if (typeof string !== 'string') {
-    throw new TypeError(
-      'The "string" argument must be one of type string, Buffer, or ArrayBuffer. ' +
-      'Received type ' + typeof string
-    )
+    string = '' + string
   }
 
-  const len = string.length
-  const mustMatch = (arguments.length > 2 && arguments[2] === true)
-  if (!mustMatch && len === 0) return 0
+  var len = string.length
+  if (len === 0) return 0
 
   // Use a for loop to avoid recursion
-  let loweredCase = false
+  var loweredCase = false
   for (;;) {
     switch (encoding) {
       case 'ascii':
@@ -7533,6 +7513,7 @@ function byteLength (string, encoding) {
         return len
       case 'utf8':
       case 'utf-8':
+      case undefined:
         return utf8ToBytes(string).length
       case 'ucs2':
       case 'ucs-2':
@@ -7544,9 +7525,7 @@ function byteLength (string, encoding) {
       case 'base64':
         return base64ToBytes(string).length
       default:
-        if (loweredCase) {
-          return mustMatch ? -1 : utf8ToBytes(string).length // assume utf8
-        }
+        if (loweredCase) return utf8ToBytes(string).length // assume utf8
         encoding = ('' + encoding).toLowerCase()
         loweredCase = true
     }
@@ -7555,7 +7534,7 @@ function byteLength (string, encoding) {
 Buffer.byteLength = byteLength
 
 function slowToString (encoding, start, end) {
-  let loweredCase = false
+  var loweredCase = false
 
   // No need to verify that "this.length <= MAX_UINT32" since it's a read-only
   // property of a typed array.
@@ -7581,7 +7560,7 @@ function slowToString (encoding, start, end) {
     return ''
   }
 
-  // Force coercion to uint32. This will also coerce falsey/NaN values to 0.
+  // Force coersion to uint32. This will also coerce falsey/NaN values to 0.
   end >>>= 0
   start >>>= 0
 
@@ -7624,37 +7603,33 @@ function slowToString (encoding, start, end) {
   }
 }
 
-// This property is used by `Buffer.isBuffer` (and the `is-buffer` npm package)
-// to detect a Buffer instance. It's not possible to use `instanceof Buffer`
-// reliably in a browserify context because there could be multiple different
-// copies of the 'buffer' package in use. This method works even for Buffer
-// instances that were created from another copy of the `buffer` package.
-// See: https://github.com/feross/buffer/issues/154
+// The property is used by `Buffer.isBuffer` and `is-buffer` (in Safari 5-7) to detect
+// Buffer instances.
 Buffer.prototype._isBuffer = true
 
 function swap (b, n, m) {
-  const i = b[n]
+  var i = b[n]
   b[n] = b[m]
   b[m] = i
 }
 
 Buffer.prototype.swap16 = function swap16 () {
-  const len = this.length
+  var len = this.length
   if (len % 2 !== 0) {
     throw new RangeError('Buffer size must be a multiple of 16-bits')
   }
-  for (let i = 0; i < len; i += 2) {
+  for (var i = 0; i < len; i += 2) {
     swap(this, i, i + 1)
   }
   return this
 }
 
 Buffer.prototype.swap32 = function swap32 () {
-  const len = this.length
+  var len = this.length
   if (len % 4 !== 0) {
     throw new RangeError('Buffer size must be a multiple of 32-bits')
   }
-  for (let i = 0; i < len; i += 4) {
+  for (var i = 0; i < len; i += 4) {
     swap(this, i, i + 3)
     swap(this, i + 1, i + 2)
   }
@@ -7662,11 +7637,11 @@ Buffer.prototype.swap32 = function swap32 () {
 }
 
 Buffer.prototype.swap64 = function swap64 () {
-  const len = this.length
+  var len = this.length
   if (len % 8 !== 0) {
     throw new RangeError('Buffer size must be a multiple of 64-bits')
   }
-  for (let i = 0; i < len; i += 8) {
+  for (var i = 0; i < len; i += 8) {
     swap(this, i, i + 7)
     swap(this, i + 1, i + 6)
     swap(this, i + 2, i + 5)
@@ -7676,13 +7651,11 @@ Buffer.prototype.swap64 = function swap64 () {
 }
 
 Buffer.prototype.toString = function toString () {
-  const length = this.length
+  var length = this.length | 0
   if (length === 0) return ''
   if (arguments.length === 0) return utf8Slice(this, 0, length)
   return slowToString.apply(this, arguments)
 }
-
-Buffer.prototype.toLocaleString = Buffer.prototype.toString
 
 Buffer.prototype.equals = function equals (b) {
   if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
@@ -7691,25 +7664,18 @@ Buffer.prototype.equals = function equals (b) {
 }
 
 Buffer.prototype.inspect = function inspect () {
-  let str = ''
-  const max = exports.INSPECT_MAX_BYTES
-  str = this.toString('hex', 0, max).replace(/(.{2})/g, '$1 ').trim()
-  if (this.length > max) str += ' ... '
+  var str = ''
+  var max = exports.INSPECT_MAX_BYTES
+  if (this.length > 0) {
+    str = this.toString('hex', 0, max).match(/.{2}/g).join(' ')
+    if (this.length > max) str += ' ... '
+  }
   return '<Buffer ' + str + '>'
-}
-if (customInspectSymbol) {
-  Buffer.prototype[customInspectSymbol] = Buffer.prototype.inspect
 }
 
 Buffer.prototype.compare = function compare (target, start, end, thisStart, thisEnd) {
-  if (isInstance(target, Uint8Array)) {
-    target = Buffer.from(target, target.offset, target.byteLength)
-  }
   if (!Buffer.isBuffer(target)) {
-    throw new TypeError(
-      'The "target" argument must be one of type Buffer or Uint8Array. ' +
-      'Received type ' + (typeof target)
-    )
+    throw new TypeError('Argument must be a Buffer')
   }
 
   if (start === undefined) {
@@ -7746,14 +7712,14 @@ Buffer.prototype.compare = function compare (target, start, end, thisStart, this
 
   if (this === target) return 0
 
-  let x = thisEnd - thisStart
-  let y = end - start
-  const len = Math.min(x, y)
+  var x = thisEnd - thisStart
+  var y = end - start
+  var len = Math.min(x, y)
 
-  const thisCopy = this.slice(thisStart, thisEnd)
-  const targetCopy = target.slice(start, end)
+  var thisCopy = this.slice(thisStart, thisEnd)
+  var targetCopy = target.slice(start, end)
 
-  for (let i = 0; i < len; ++i) {
+  for (var i = 0; i < len; ++i) {
     if (thisCopy[i] !== targetCopy[i]) {
       x = thisCopy[i]
       y = targetCopy[i]
@@ -7788,8 +7754,8 @@ function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
   } else if (byteOffset < -0x80000000) {
     byteOffset = -0x80000000
   }
-  byteOffset = +byteOffset // Coerce to Number.
-  if (numberIsNaN(byteOffset)) {
+  byteOffset = +byteOffset  // Coerce to Number.
+  if (isNaN(byteOffset)) {
     // byteOffset: it it's undefined, null, NaN, "foo", etc, search whole buffer
     byteOffset = dir ? 0 : (buffer.length - 1)
   }
@@ -7818,23 +7784,24 @@ function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
     return arrayIndexOf(buffer, val, byteOffset, encoding, dir)
   } else if (typeof val === 'number') {
     val = val & 0xFF // Search for a byte value [0-255]
-    if (typeof Uint8Array.prototype.indexOf === 'function') {
+    if (Buffer.TYPED_ARRAY_SUPPORT &&
+        typeof Uint8Array.prototype.indexOf === 'function') {
       if (dir) {
         return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset)
       } else {
         return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset)
       }
     }
-    return arrayIndexOf(buffer, [val], byteOffset, encoding, dir)
+    return arrayIndexOf(buffer, [ val ], byteOffset, encoding, dir)
   }
 
   throw new TypeError('val must be string, number or Buffer')
 }
 
 function arrayIndexOf (arr, val, byteOffset, encoding, dir) {
-  let indexSize = 1
-  let arrLength = arr.length
-  let valLength = val.length
+  var indexSize = 1
+  var arrLength = arr.length
+  var valLength = val.length
 
   if (encoding !== undefined) {
     encoding = String(encoding).toLowerCase()
@@ -7858,9 +7825,9 @@ function arrayIndexOf (arr, val, byteOffset, encoding, dir) {
     }
   }
 
-  let i
+  var i
   if (dir) {
-    let foundIndex = -1
+    var foundIndex = -1
     for (i = byteOffset; i < arrLength; i++) {
       if (read(arr, i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
         if (foundIndex === -1) foundIndex = i
@@ -7873,8 +7840,8 @@ function arrayIndexOf (arr, val, byteOffset, encoding, dir) {
   } else {
     if (byteOffset + valLength > arrLength) byteOffset = arrLength - valLength
     for (i = byteOffset; i >= 0; i--) {
-      let found = true
-      for (let j = 0; j < valLength; j++) {
+      var found = true
+      for (var j = 0; j < valLength; j++) {
         if (read(arr, i + j) !== read(val, j)) {
           found = false
           break
@@ -7901,7 +7868,7 @@ Buffer.prototype.lastIndexOf = function lastIndexOf (val, byteOffset, encoding) 
 
 function hexWrite (buf, string, offset, length) {
   offset = Number(offset) || 0
-  const remaining = buf.length - offset
+  var remaining = buf.length - offset
   if (!length) {
     length = remaining
   } else {
@@ -7911,15 +7878,16 @@ function hexWrite (buf, string, offset, length) {
     }
   }
 
-  const strLen = string.length
+  // must be an even number of digits
+  var strLen = string.length
+  if (strLen % 2 !== 0) throw new TypeError('Invalid hex string')
 
   if (length > strLen / 2) {
     length = strLen / 2
   }
-  let i
-  for (i = 0; i < length; ++i) {
-    const parsed = parseInt(string.substr(i * 2, 2), 16)
-    if (numberIsNaN(parsed)) return i
+  for (var i = 0; i < length; ++i) {
+    var parsed = parseInt(string.substr(i * 2, 2), 16)
+    if (isNaN(parsed)) return i
     buf[offset + i] = parsed
   }
   return i
@@ -7931,6 +7899,10 @@ function utf8Write (buf, string, offset, length) {
 
 function asciiWrite (buf, string, offset, length) {
   return blitBuffer(asciiToBytes(string), buf, offset, length)
+}
+
+function latin1Write (buf, string, offset, length) {
+  return asciiWrite(buf, string, offset, length)
 }
 
 function base64Write (buf, string, offset, length) {
@@ -7954,21 +7926,22 @@ Buffer.prototype.write = function write (string, offset, length, encoding) {
     offset = 0
   // Buffer#write(string, offset[, length][, encoding])
   } else if (isFinite(offset)) {
-    offset = offset >>> 0
+    offset = offset | 0
     if (isFinite(length)) {
-      length = length >>> 0
+      length = length | 0
       if (encoding === undefined) encoding = 'utf8'
     } else {
       encoding = length
       length = undefined
     }
+  // legacy write(string, encoding, offset, length) - remove in v0.13
   } else {
     throw new Error(
       'Buffer.write(string, encoding, offset[, length]) is no longer supported'
     )
   }
 
-  const remaining = this.length - offset
+  var remaining = this.length - offset
   if (length === undefined || length > remaining) length = remaining
 
   if ((string.length > 0 && (length < 0 || offset < 0)) || offset > this.length) {
@@ -7977,7 +7950,7 @@ Buffer.prototype.write = function write (string, offset, length, encoding) {
 
   if (!encoding) encoding = 'utf8'
 
-  let loweredCase = false
+  var loweredCase = false
   for (;;) {
     switch (encoding) {
       case 'hex':
@@ -7988,9 +7961,11 @@ Buffer.prototype.write = function write (string, offset, length, encoding) {
         return utf8Write(this, string, offset, length)
 
       case 'ascii':
+        return asciiWrite(this, string, offset, length)
+
       case 'latin1':
       case 'binary':
-        return asciiWrite(this, string, offset, length)
+        return latin1Write(this, string, offset, length)
 
       case 'base64':
         // Warning: maxLength not taken into account in base64Write
@@ -8027,22 +8002,19 @@ function base64Slice (buf, start, end) {
 
 function utf8Slice (buf, start, end) {
   end = Math.min(buf.length, end)
-  const res = []
+  var res = []
 
-  let i = start
+  var i = start
   while (i < end) {
-    const firstByte = buf[i]
-    let codePoint = null
-    let bytesPerSequence = (firstByte > 0xEF)
-      ? 4
-      : (firstByte > 0xDF)
-          ? 3
-          : (firstByte > 0xBF)
-              ? 2
-              : 1
+    var firstByte = buf[i]
+    var codePoint = null
+    var bytesPerSequence = (firstByte > 0xEF) ? 4
+      : (firstByte > 0xDF) ? 3
+      : (firstByte > 0xBF) ? 2
+      : 1
 
     if (i + bytesPerSequence <= end) {
-      let secondByte, thirdByte, fourthByte, tempCodePoint
+      var secondByte, thirdByte, fourthByte, tempCodePoint
 
       switch (bytesPerSequence) {
         case 1:
@@ -8104,17 +8076,17 @@ function utf8Slice (buf, start, end) {
 // Based on http://stackoverflow.com/a/22747272/680742, the browser with
 // the lowest limit is Chrome, with 0x10000 args.
 // We go 1 magnitude less, for safety
-const MAX_ARGUMENTS_LENGTH = 0x1000
+var MAX_ARGUMENTS_LENGTH = 0x1000
 
 function decodeCodePointsArray (codePoints) {
-  const len = codePoints.length
+  var len = codePoints.length
   if (len <= MAX_ARGUMENTS_LENGTH) {
     return String.fromCharCode.apply(String, codePoints) // avoid extra slice()
   }
 
   // Decode in chunks to avoid "call stack size exceeded".
-  let res = ''
-  let i = 0
+  var res = ''
+  var i = 0
   while (i < len) {
     res += String.fromCharCode.apply(
       String,
@@ -8125,50 +8097,49 @@ function decodeCodePointsArray (codePoints) {
 }
 
 function asciiSlice (buf, start, end) {
-  let ret = ''
+  var ret = ''
   end = Math.min(buf.length, end)
 
-  for (let i = start; i < end; ++i) {
+  for (var i = start; i < end; ++i) {
     ret += String.fromCharCode(buf[i] & 0x7F)
   }
   return ret
 }
 
 function latin1Slice (buf, start, end) {
-  let ret = ''
+  var ret = ''
   end = Math.min(buf.length, end)
 
-  for (let i = start; i < end; ++i) {
+  for (var i = start; i < end; ++i) {
     ret += String.fromCharCode(buf[i])
   }
   return ret
 }
 
 function hexSlice (buf, start, end) {
-  const len = buf.length
+  var len = buf.length
 
   if (!start || start < 0) start = 0
   if (!end || end < 0 || end > len) end = len
 
-  let out = ''
-  for (let i = start; i < end; ++i) {
-    out += hexSliceLookupTable[buf[i]]
+  var out = ''
+  for (var i = start; i < end; ++i) {
+    out += toHex(buf[i])
   }
   return out
 }
 
 function utf16leSlice (buf, start, end) {
-  const bytes = buf.slice(start, end)
-  let res = ''
-  // If bytes.length is odd, the last 8 bits must be ignored (same as node.js)
-  for (let i = 0; i < bytes.length - 1; i += 2) {
-    res += String.fromCharCode(bytes[i] + (bytes[i + 1] * 256))
+  var bytes = buf.slice(start, end)
+  var res = ''
+  for (var i = 0; i < bytes.length; i += 2) {
+    res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256)
   }
   return res
 }
 
 Buffer.prototype.slice = function slice (start, end) {
-  const len = this.length
+  var len = this.length
   start = ~~start
   end = end === undefined ? len : ~~end
 
@@ -8188,9 +8159,17 @@ Buffer.prototype.slice = function slice (start, end) {
 
   if (end < start) end = start
 
-  const newBuf = this.subarray(start, end)
-  // Return an augmented `Uint8Array` instance
-  Object.setPrototypeOf(newBuf, Buffer.prototype)
+  var newBuf
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    newBuf = this.subarray(start, end)
+    newBuf.__proto__ = Buffer.prototype
+  } else {
+    var sliceLen = end - start
+    newBuf = new Buffer(sliceLen, undefined)
+    for (var i = 0; i < sliceLen; ++i) {
+      newBuf[i] = this[i + start]
+    }
+  }
 
   return newBuf
 }
@@ -8203,15 +8182,14 @@ function checkOffset (offset, ext, length) {
   if (offset + ext > length) throw new RangeError('Trying to access beyond buffer length')
 }
 
-Buffer.prototype.readUintLE =
 Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert) {
-  offset = offset >>> 0
-  byteLength = byteLength >>> 0
+  offset = offset | 0
+  byteLength = byteLength | 0
   if (!noAssert) checkOffset(offset, byteLength, this.length)
 
-  let val = this[offset]
-  let mul = 1
-  let i = 0
+  var val = this[offset]
+  var mul = 1
+  var i = 0
   while (++i < byteLength && (mul *= 0x100)) {
     val += this[offset + i] * mul
   }
@@ -8219,16 +8197,15 @@ Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert)
   return val
 }
 
-Buffer.prototype.readUintBE =
 Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert) {
-  offset = offset >>> 0
-  byteLength = byteLength >>> 0
+  offset = offset | 0
+  byteLength = byteLength | 0
   if (!noAssert) {
     checkOffset(offset, byteLength, this.length)
   }
 
-  let val = this[offset + --byteLength]
-  let mul = 1
+  var val = this[offset + --byteLength]
+  var mul = 1
   while (byteLength > 0 && (mul *= 0x100)) {
     val += this[offset + --byteLength] * mul
   }
@@ -8236,30 +8213,22 @@ Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert)
   return val
 }
 
-Buffer.prototype.readUint8 =
 Buffer.prototype.readUInt8 = function readUInt8 (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 1, this.length)
   return this[offset]
 }
 
-Buffer.prototype.readUint16LE =
 Buffer.prototype.readUInt16LE = function readUInt16LE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 2, this.length)
   return this[offset] | (this[offset + 1] << 8)
 }
 
-Buffer.prototype.readUint16BE =
 Buffer.prototype.readUInt16BE = function readUInt16BE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 2, this.length)
   return (this[offset] << 8) | this[offset + 1]
 }
 
-Buffer.prototype.readUint32LE =
 Buffer.prototype.readUInt32LE = function readUInt32LE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
 
   return ((this[offset]) |
@@ -8268,9 +8237,7 @@ Buffer.prototype.readUInt32LE = function readUInt32LE (offset, noAssert) {
       (this[offset + 3] * 0x1000000)
 }
 
-Buffer.prototype.readUint32BE =
 Buffer.prototype.readUInt32BE = function readUInt32BE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
 
   return (this[offset] * 0x1000000) +
@@ -8279,58 +8246,14 @@ Buffer.prototype.readUInt32BE = function readUInt32BE (offset, noAssert) {
     this[offset + 3])
 }
 
-Buffer.prototype.readBigUInt64LE = defineBigIntMethod(function readBigUInt64LE (offset) {
-  offset = offset >>> 0
-  validateNumber(offset, 'offset')
-  const first = this[offset]
-  const last = this[offset + 7]
-  if (first === undefined || last === undefined) {
-    boundsError(offset, this.length - 8)
-  }
-
-  const lo = first +
-    this[++offset] * 2 ** 8 +
-    this[++offset] * 2 ** 16 +
-    this[++offset] * 2 ** 24
-
-  const hi = this[++offset] +
-    this[++offset] * 2 ** 8 +
-    this[++offset] * 2 ** 16 +
-    last * 2 ** 24
-
-  return BigInt(lo) + (BigInt(hi) << BigInt(32))
-})
-
-Buffer.prototype.readBigUInt64BE = defineBigIntMethod(function readBigUInt64BE (offset) {
-  offset = offset >>> 0
-  validateNumber(offset, 'offset')
-  const first = this[offset]
-  const last = this[offset + 7]
-  if (first === undefined || last === undefined) {
-    boundsError(offset, this.length - 8)
-  }
-
-  const hi = first * 2 ** 24 +
-    this[++offset] * 2 ** 16 +
-    this[++offset] * 2 ** 8 +
-    this[++offset]
-
-  const lo = this[++offset] * 2 ** 24 +
-    this[++offset] * 2 ** 16 +
-    this[++offset] * 2 ** 8 +
-    last
-
-  return (BigInt(hi) << BigInt(32)) + BigInt(lo)
-})
-
 Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
-  offset = offset >>> 0
-  byteLength = byteLength >>> 0
+  offset = offset | 0
+  byteLength = byteLength | 0
   if (!noAssert) checkOffset(offset, byteLength, this.length)
 
-  let val = this[offset]
-  let mul = 1
-  let i = 0
+  var val = this[offset]
+  var mul = 1
+  var i = 0
   while (++i < byteLength && (mul *= 0x100)) {
     val += this[offset + i] * mul
   }
@@ -8342,13 +8265,13 @@ Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
 }
 
 Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
-  offset = offset >>> 0
-  byteLength = byteLength >>> 0
+  offset = offset | 0
+  byteLength = byteLength | 0
   if (!noAssert) checkOffset(offset, byteLength, this.length)
 
-  let i = byteLength
-  let mul = 1
-  let val = this[offset + --i]
+  var i = byteLength
+  var mul = 1
+  var val = this[offset + --i]
   while (i > 0 && (mul *= 0x100)) {
     val += this[offset + --i] * mul
   }
@@ -8360,28 +8283,24 @@ Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
 }
 
 Buffer.prototype.readInt8 = function readInt8 (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 1, this.length)
   if (!(this[offset] & 0x80)) return (this[offset])
   return ((0xff - this[offset] + 1) * -1)
 }
 
 Buffer.prototype.readInt16LE = function readInt16LE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 2, this.length)
-  const val = this[offset] | (this[offset + 1] << 8)
+  var val = this[offset] | (this[offset + 1] << 8)
   return (val & 0x8000) ? val | 0xFFFF0000 : val
 }
 
 Buffer.prototype.readInt16BE = function readInt16BE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 2, this.length)
-  const val = this[offset + 1] | (this[offset] << 8)
+  var val = this[offset + 1] | (this[offset] << 8)
   return (val & 0x8000) ? val | 0xFFFF0000 : val
 }
 
 Buffer.prototype.readInt32LE = function readInt32LE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
 
   return (this[offset]) |
@@ -8391,7 +8310,6 @@ Buffer.prototype.readInt32LE = function readInt32LE (offset, noAssert) {
 }
 
 Buffer.prototype.readInt32BE = function readInt32BE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
 
   return (this[offset] << 24) |
@@ -8400,68 +8318,22 @@ Buffer.prototype.readInt32BE = function readInt32BE (offset, noAssert) {
     (this[offset + 3])
 }
 
-Buffer.prototype.readBigInt64LE = defineBigIntMethod(function readBigInt64LE (offset) {
-  offset = offset >>> 0
-  validateNumber(offset, 'offset')
-  const first = this[offset]
-  const last = this[offset + 7]
-  if (first === undefined || last === undefined) {
-    boundsError(offset, this.length - 8)
-  }
-
-  const val = this[offset + 4] +
-    this[offset + 5] * 2 ** 8 +
-    this[offset + 6] * 2 ** 16 +
-    (last << 24) // Overflow
-
-  return (BigInt(val) << BigInt(32)) +
-    BigInt(first +
-    this[++offset] * 2 ** 8 +
-    this[++offset] * 2 ** 16 +
-    this[++offset] * 2 ** 24)
-})
-
-Buffer.prototype.readBigInt64BE = defineBigIntMethod(function readBigInt64BE (offset) {
-  offset = offset >>> 0
-  validateNumber(offset, 'offset')
-  const first = this[offset]
-  const last = this[offset + 7]
-  if (first === undefined || last === undefined) {
-    boundsError(offset, this.length - 8)
-  }
-
-  const val = (first << 24) + // Overflow
-    this[++offset] * 2 ** 16 +
-    this[++offset] * 2 ** 8 +
-    this[++offset]
-
-  return (BigInt(val) << BigInt(32)) +
-    BigInt(this[++offset] * 2 ** 24 +
-    this[++offset] * 2 ** 16 +
-    this[++offset] * 2 ** 8 +
-    last)
-})
-
 Buffer.prototype.readFloatLE = function readFloatLE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
   return ieee754.read(this, offset, true, 23, 4)
 }
 
 Buffer.prototype.readFloatBE = function readFloatBE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
   return ieee754.read(this, offset, false, 23, 4)
 }
 
 Buffer.prototype.readDoubleLE = function readDoubleLE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 8, this.length)
   return ieee754.read(this, offset, true, 52, 8)
 }
 
 Buffer.prototype.readDoubleBE = function readDoubleBE (offset, noAssert) {
-  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 8, this.length)
   return ieee754.read(this, offset, false, 52, 8)
 }
@@ -8472,18 +8344,17 @@ function checkInt (buf, value, offset, ext, max, min) {
   if (offset + ext > buf.length) throw new RangeError('Index out of range')
 }
 
-Buffer.prototype.writeUintLE =
 Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, noAssert) {
   value = +value
-  offset = offset >>> 0
-  byteLength = byteLength >>> 0
+  offset = offset | 0
+  byteLength = byteLength | 0
   if (!noAssert) {
-    const maxBytes = Math.pow(2, 8 * byteLength) - 1
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
     checkInt(this, value, offset, byteLength, maxBytes, 0)
   }
 
-  let mul = 1
-  let i = 0
+  var mul = 1
+  var i = 0
   this[offset] = value & 0xFF
   while (++i < byteLength && (mul *= 0x100)) {
     this[offset + i] = (value / mul) & 0xFF
@@ -8492,18 +8363,17 @@ Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, 
   return offset + byteLength
 }
 
-Buffer.prototype.writeUintBE =
 Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, noAssert) {
   value = +value
-  offset = offset >>> 0
-  byteLength = byteLength >>> 0
+  offset = offset | 0
+  byteLength = byteLength | 0
   if (!noAssert) {
-    const maxBytes = Math.pow(2, 8 * byteLength) - 1
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
     checkInt(this, value, offset, byteLength, maxBytes, 0)
   }
 
-  let i = byteLength - 1
-  let mul = 1
+  var i = byteLength - 1
+  var mul = 1
   this[offset + i] = value & 0xFF
   while (--i >= 0 && (mul *= 0x100)) {
     this[offset + i] = (value / mul) & 0xFF
@@ -8512,123 +8382,98 @@ Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, 
   return offset + byteLength
 }
 
-Buffer.prototype.writeUint8 =
 Buffer.prototype.writeUInt8 = function writeUInt8 (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 1, 0xff, 0)
+  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
   this[offset] = (value & 0xff)
   return offset + 1
 }
 
-Buffer.prototype.writeUint16LE =
+function objectWriteUInt16 (buf, value, offset, littleEndian) {
+  if (value < 0) value = 0xffff + value + 1
+  for (var i = 0, j = Math.min(buf.length - offset, 2); i < j; ++i) {
+    buf[offset + i] = (value & (0xff << (8 * (littleEndian ? i : 1 - i)))) >>>
+      (littleEndian ? i : 1 - i) * 8
+  }
+}
+
 Buffer.prototype.writeUInt16LE = function writeUInt16LE (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
-  this[offset] = (value & 0xff)
-  this[offset + 1] = (value >>> 8)
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = (value & 0xff)
+    this[offset + 1] = (value >>> 8)
+  } else {
+    objectWriteUInt16(this, value, offset, true)
+  }
   return offset + 2
 }
 
-Buffer.prototype.writeUint16BE =
 Buffer.prototype.writeUInt16BE = function writeUInt16BE (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
-  this[offset] = (value >>> 8)
-  this[offset + 1] = (value & 0xff)
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = (value >>> 8)
+    this[offset + 1] = (value & 0xff)
+  } else {
+    objectWriteUInt16(this, value, offset, false)
+  }
   return offset + 2
 }
 
-Buffer.prototype.writeUint32LE =
+function objectWriteUInt32 (buf, value, offset, littleEndian) {
+  if (value < 0) value = 0xffffffff + value + 1
+  for (var i = 0, j = Math.min(buf.length - offset, 4); i < j; ++i) {
+    buf[offset + i] = (value >>> (littleEndian ? i : 3 - i) * 8) & 0xff
+  }
+}
+
 Buffer.prototype.writeUInt32LE = function writeUInt32LE (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
-  this[offset + 3] = (value >>> 24)
-  this[offset + 2] = (value >>> 16)
-  this[offset + 1] = (value >>> 8)
-  this[offset] = (value & 0xff)
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset + 3] = (value >>> 24)
+    this[offset + 2] = (value >>> 16)
+    this[offset + 1] = (value >>> 8)
+    this[offset] = (value & 0xff)
+  } else {
+    objectWriteUInt32(this, value, offset, true)
+  }
   return offset + 4
 }
 
-Buffer.prototype.writeUint32BE =
 Buffer.prototype.writeUInt32BE = function writeUInt32BE (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
-  this[offset] = (value >>> 24)
-  this[offset + 1] = (value >>> 16)
-  this[offset + 2] = (value >>> 8)
-  this[offset + 3] = (value & 0xff)
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = (value >>> 24)
+    this[offset + 1] = (value >>> 16)
+    this[offset + 2] = (value >>> 8)
+    this[offset + 3] = (value & 0xff)
+  } else {
+    objectWriteUInt32(this, value, offset, false)
+  }
   return offset + 4
 }
-
-function wrtBigUInt64LE (buf, value, offset, min, max) {
-  checkIntBI(value, min, max, buf, offset, 7)
-
-  let lo = Number(value & BigInt(0xffffffff))
-  buf[offset++] = lo
-  lo = lo >> 8
-  buf[offset++] = lo
-  lo = lo >> 8
-  buf[offset++] = lo
-  lo = lo >> 8
-  buf[offset++] = lo
-  let hi = Number(value >> BigInt(32) & BigInt(0xffffffff))
-  buf[offset++] = hi
-  hi = hi >> 8
-  buf[offset++] = hi
-  hi = hi >> 8
-  buf[offset++] = hi
-  hi = hi >> 8
-  buf[offset++] = hi
-  return offset
-}
-
-function wrtBigUInt64BE (buf, value, offset, min, max) {
-  checkIntBI(value, min, max, buf, offset, 7)
-
-  let lo = Number(value & BigInt(0xffffffff))
-  buf[offset + 7] = lo
-  lo = lo >> 8
-  buf[offset + 6] = lo
-  lo = lo >> 8
-  buf[offset + 5] = lo
-  lo = lo >> 8
-  buf[offset + 4] = lo
-  let hi = Number(value >> BigInt(32) & BigInt(0xffffffff))
-  buf[offset + 3] = hi
-  hi = hi >> 8
-  buf[offset + 2] = hi
-  hi = hi >> 8
-  buf[offset + 1] = hi
-  hi = hi >> 8
-  buf[offset] = hi
-  return offset + 8
-}
-
-Buffer.prototype.writeBigUInt64LE = defineBigIntMethod(function writeBigUInt64LE (value, offset = 0) {
-  return wrtBigUInt64LE(this, value, offset, BigInt(0), BigInt('0xffffffffffffffff'))
-})
-
-Buffer.prototype.writeBigUInt64BE = defineBigIntMethod(function writeBigUInt64BE (value, offset = 0) {
-  return wrtBigUInt64BE(this, value, offset, BigInt(0), BigInt('0xffffffffffffffff'))
-})
 
 Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) {
-    const limit = Math.pow(2, (8 * byteLength) - 1)
+    var limit = Math.pow(2, 8 * byteLength - 1)
 
     checkInt(this, value, offset, byteLength, limit - 1, -limit)
   }
 
-  let i = 0
-  let mul = 1
-  let sub = 0
+  var i = 0
+  var mul = 1
+  var sub = 0
   this[offset] = value & 0xFF
   while (++i < byteLength && (mul *= 0x100)) {
     if (value < 0 && sub === 0 && this[offset + i - 1] !== 0) {
@@ -8642,16 +8487,16 @@ Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, no
 
 Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) {
-    const limit = Math.pow(2, (8 * byteLength) - 1)
+    var limit = Math.pow(2, 8 * byteLength - 1)
 
     checkInt(this, value, offset, byteLength, limit - 1, -limit)
   }
 
-  let i = byteLength - 1
-  let mul = 1
-  let sub = 0
+  var i = byteLength - 1
+  var mul = 1
+  var sub = 0
   this[offset + i] = value & 0xFF
   while (--i >= 0 && (mul *= 0x100)) {
     if (value < 0 && sub === 0 && this[offset + i + 1] !== 0) {
@@ -8665,8 +8510,9 @@ Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, no
 
 Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80)
+  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
   if (value < 0) value = 0xff + value + 1
   this[offset] = (value & 0xff)
   return offset + 1
@@ -8674,52 +8520,60 @@ Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
 
 Buffer.prototype.writeInt16LE = function writeInt16LE (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
-  this[offset] = (value & 0xff)
-  this[offset + 1] = (value >>> 8)
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = (value & 0xff)
+    this[offset + 1] = (value >>> 8)
+  } else {
+    objectWriteUInt16(this, value, offset, true)
+  }
   return offset + 2
 }
 
 Buffer.prototype.writeInt16BE = function writeInt16BE (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
-  this[offset] = (value >>> 8)
-  this[offset + 1] = (value & 0xff)
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = (value >>> 8)
+    this[offset + 1] = (value & 0xff)
+  } else {
+    objectWriteUInt16(this, value, offset, false)
+  }
   return offset + 2
 }
 
 Buffer.prototype.writeInt32LE = function writeInt32LE (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
-  this[offset] = (value & 0xff)
-  this[offset + 1] = (value >>> 8)
-  this[offset + 2] = (value >>> 16)
-  this[offset + 3] = (value >>> 24)
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = (value & 0xff)
+    this[offset + 1] = (value >>> 8)
+    this[offset + 2] = (value >>> 16)
+    this[offset + 3] = (value >>> 24)
+  } else {
+    objectWriteUInt32(this, value, offset, true)
+  }
   return offset + 4
 }
 
 Buffer.prototype.writeInt32BE = function writeInt32BE (value, offset, noAssert) {
   value = +value
-  offset = offset >>> 0
+  offset = offset | 0
   if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
   if (value < 0) value = 0xffffffff + value + 1
-  this[offset] = (value >>> 24)
-  this[offset + 1] = (value >>> 16)
-  this[offset + 2] = (value >>> 8)
-  this[offset + 3] = (value & 0xff)
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = (value >>> 24)
+    this[offset + 1] = (value >>> 16)
+    this[offset + 2] = (value >>> 8)
+    this[offset + 3] = (value & 0xff)
+  } else {
+    objectWriteUInt32(this, value, offset, false)
+  }
   return offset + 4
 }
-
-Buffer.prototype.writeBigInt64LE = defineBigIntMethod(function writeBigInt64LE (value, offset = 0) {
-  return wrtBigUInt64LE(this, value, offset, -BigInt('0x8000000000000000'), BigInt('0x7fffffffffffffff'))
-})
-
-Buffer.prototype.writeBigInt64BE = defineBigIntMethod(function writeBigInt64BE (value, offset = 0) {
-  return wrtBigUInt64BE(this, value, offset, -BigInt('0x8000000000000000'), BigInt('0x7fffffffffffffff'))
-})
 
 function checkIEEE754 (buf, value, offset, ext, max, min) {
   if (offset + ext > buf.length) throw new RangeError('Index out of range')
@@ -8727,8 +8581,6 @@ function checkIEEE754 (buf, value, offset, ext, max, min) {
 }
 
 function writeFloat (buf, value, offset, littleEndian, noAssert) {
-  value = +value
-  offset = offset >>> 0
   if (!noAssert) {
     checkIEEE754(buf, value, offset, 4, 3.4028234663852886e+38, -3.4028234663852886e+38)
   }
@@ -8745,8 +8597,6 @@ Buffer.prototype.writeFloatBE = function writeFloatBE (value, offset, noAssert) 
 }
 
 function writeDouble (buf, value, offset, littleEndian, noAssert) {
-  value = +value
-  offset = offset >>> 0
   if (!noAssert) {
     checkIEEE754(buf, value, offset, 8, 1.7976931348623157E+308, -1.7976931348623157E+308)
   }
@@ -8764,7 +8614,6 @@ Buffer.prototype.writeDoubleBE = function writeDoubleBE (value, offset, noAssert
 
 // copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
 Buffer.prototype.copy = function copy (target, targetStart, start, end) {
-  if (!Buffer.isBuffer(target)) throw new TypeError('argument should be a Buffer')
   if (!start) start = 0
   if (!end && end !== 0) end = this.length
   if (targetStart >= target.length) targetStart = target.length
@@ -8779,7 +8628,7 @@ Buffer.prototype.copy = function copy (target, targetStart, start, end) {
   if (targetStart < 0) {
     throw new RangeError('targetStart out of bounds')
   }
-  if (start < 0 || start >= this.length) throw new RangeError('Index out of range')
+  if (start < 0 || start >= this.length) throw new RangeError('sourceStart out of bounds')
   if (end < 0) throw new RangeError('sourceEnd out of bounds')
 
   // Are we oob?
@@ -8788,15 +8637,23 @@ Buffer.prototype.copy = function copy (target, targetStart, start, end) {
     end = target.length - targetStart + start
   }
 
-  const len = end - start
+  var len = end - start
+  var i
 
-  if (this === target && typeof Uint8Array.prototype.copyWithin === 'function') {
-    // Use built-in when available, missing from IE11
-    this.copyWithin(targetStart, start, end)
+  if (this === target && start < targetStart && targetStart < end) {
+    // descending copy from end
+    for (i = len - 1; i >= 0; --i) {
+      target[i + targetStart] = this[i + start]
+    }
+  } else if (len < 1000 || !Buffer.TYPED_ARRAY_SUPPORT) {
+    // ascending copy from start
+    for (i = 0; i < len; ++i) {
+      target[i + targetStart] = this[i + start]
+    }
   } else {
     Uint8Array.prototype.set.call(
       target,
-      this.subarray(start, end),
+      this.subarray(start, start + len),
       targetStart
     )
   }
@@ -8819,24 +8676,20 @@ Buffer.prototype.fill = function fill (val, start, end, encoding) {
       encoding = end
       end = this.length
     }
+    if (val.length === 1) {
+      var code = val.charCodeAt(0)
+      if (code < 256) {
+        val = code
+      }
+    }
     if (encoding !== undefined && typeof encoding !== 'string') {
       throw new TypeError('encoding must be a string')
     }
     if (typeof encoding === 'string' && !Buffer.isEncoding(encoding)) {
       throw new TypeError('Unknown encoding: ' + encoding)
     }
-    if (val.length === 1) {
-      const code = val.charCodeAt(0)
-      if ((encoding === 'utf8' && code < 128) ||
-          encoding === 'latin1') {
-        // Fast path: If `val` fits into a single byte, use that numeric value.
-        val = code
-      }
-    }
   } else if (typeof val === 'number') {
     val = val & 255
-  } else if (typeof val === 'boolean') {
-    val = Number(val)
   }
 
   // Invalid ranges are not set to a default, so can range check early.
@@ -8853,20 +8706,16 @@ Buffer.prototype.fill = function fill (val, start, end, encoding) {
 
   if (!val) val = 0
 
-  let i
+  var i
   if (typeof val === 'number') {
     for (i = start; i < end; ++i) {
       this[i] = val
     }
   } else {
-    const bytes = Buffer.isBuffer(val)
+    var bytes = Buffer.isBuffer(val)
       ? val
-      : Buffer.from(val, encoding)
-    const len = bytes.length
-    if (len === 0) {
-      throw new TypeError('The value "' + val +
-        '" is invalid for argument "value"')
-    }
+      : utf8ToBytes(new Buffer(val, encoding).toString())
+    var len = bytes.length
     for (i = 0; i < end - start; ++i) {
       this[i + start] = bytes[i % len]
     }
@@ -8875,149 +8724,14 @@ Buffer.prototype.fill = function fill (val, start, end, encoding) {
   return this
 }
 
-// CUSTOM ERRORS
-// =============
-
-// Simplified versions from Node, changed for Buffer-only usage
-const errors = {}
-function E (sym, getMessage, Base) {
-  errors[sym] = class NodeError extends Base {
-    constructor () {
-      super()
-
-      Object.defineProperty(this, 'message', {
-        value: getMessage.apply(this, arguments),
-        writable: true,
-        configurable: true
-      })
-
-      // Add the error code to the name to include it in the stack trace.
-      this.name = `${this.name} [${sym}]`
-      // Access the stack to generate the error message including the error code
-      // from the name.
-      this.stack // eslint-disable-line no-unused-expressions
-      // Reset the name to the actual name.
-      delete this.name
-    }
-
-    get code () {
-      return sym
-    }
-
-    set code (value) {
-      Object.defineProperty(this, 'code', {
-        configurable: true,
-        enumerable: true,
-        value,
-        writable: true
-      })
-    }
-
-    toString () {
-      return `${this.name} [${sym}]: ${this.message}`
-    }
-  }
-}
-
-E('ERR_BUFFER_OUT_OF_BOUNDS',
-  function (name) {
-    if (name) {
-      return `${name} is outside of buffer bounds`
-    }
-
-    return 'Attempt to access memory outside buffer bounds'
-  }, RangeError)
-E('ERR_INVALID_ARG_TYPE',
-  function (name, actual) {
-    return `The "${name}" argument must be of type number. Received type ${typeof actual}`
-  }, TypeError)
-E('ERR_OUT_OF_RANGE',
-  function (str, range, input) {
-    let msg = `The value of "${str}" is out of range.`
-    let received = input
-    if (Number.isInteger(input) && Math.abs(input) > 2 ** 32) {
-      received = addNumericalSeparator(String(input))
-    } else if (typeof input === 'bigint') {
-      received = String(input)
-      if (input > BigInt(2) ** BigInt(32) || input < -(BigInt(2) ** BigInt(32))) {
-        received = addNumericalSeparator(received)
-      }
-      received += 'n'
-    }
-    msg += ` It must be ${range}. Received ${received}`
-    return msg
-  }, RangeError)
-
-function addNumericalSeparator (val) {
-  let res = ''
-  let i = val.length
-  const start = val[0] === '-' ? 1 : 0
-  for (; i >= start + 4; i -= 3) {
-    res = `_${val.slice(i - 3, i)}${res}`
-  }
-  return `${val.slice(0, i)}${res}`
-}
-
-// CHECK FUNCTIONS
-// ===============
-
-function checkBounds (buf, offset, byteLength) {
-  validateNumber(offset, 'offset')
-  if (buf[offset] === undefined || buf[offset + byteLength] === undefined) {
-    boundsError(offset, buf.length - (byteLength + 1))
-  }
-}
-
-function checkIntBI (value, min, max, buf, offset, byteLength) {
-  if (value > max || value < min) {
-    const n = typeof min === 'bigint' ? 'n' : ''
-    let range
-    if (byteLength > 3) {
-      if (min === 0 || min === BigInt(0)) {
-        range = `>= 0${n} and < 2${n} ** ${(byteLength + 1) * 8}${n}`
-      } else {
-        range = `>= -(2${n} ** ${(byteLength + 1) * 8 - 1}${n}) and < 2 ** ` +
-                `${(byteLength + 1) * 8 - 1}${n}`
-      }
-    } else {
-      range = `>= ${min}${n} and <= ${max}${n}`
-    }
-    throw new errors.ERR_OUT_OF_RANGE('value', range, value)
-  }
-  checkBounds(buf, offset, byteLength)
-}
-
-function validateNumber (value, name) {
-  if (typeof value !== 'number') {
-    throw new errors.ERR_INVALID_ARG_TYPE(name, 'number', value)
-  }
-}
-
-function boundsError (value, length, type) {
-  if (Math.floor(value) !== value) {
-    validateNumber(value, type)
-    throw new errors.ERR_OUT_OF_RANGE(type || 'offset', 'an integer', value)
-  }
-
-  if (length < 0) {
-    throw new errors.ERR_BUFFER_OUT_OF_BOUNDS()
-  }
-
-  throw new errors.ERR_OUT_OF_RANGE(type || 'offset',
-                                    `>= ${type ? 1 : 0} and <= ${length}`,
-                                    value)
-}
-
 // HELPER FUNCTIONS
 // ================
 
-const INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g
+var INVALID_BASE64_RE = /[^+\/0-9A-Za-z-_]/g
 
 function base64clean (str) {
-  // Node takes equal signs as end of the Base64 encoding
-  str = str.split('=')[0]
   // Node strips out invalid characters like \n and \t from the string, base64-js does not
-  str = str.trim().replace(INVALID_BASE64_RE, '')
+  str = stringtrim(str).replace(INVALID_BASE64_RE, '')
   // Node converts strings with length < 2 to ''
   if (str.length < 2) return ''
   // Node allows for non-padded base64 strings (missing trailing ===), base64-js does not
@@ -9027,14 +8741,24 @@ function base64clean (str) {
   return str
 }
 
+function stringtrim (str) {
+  if (str.trim) return str.trim()
+  return str.replace(/^\s+|\s+$/g, '')
+}
+
+function toHex (n) {
+  if (n < 16) return '0' + n.toString(16)
+  return n.toString(16)
+}
+
 function utf8ToBytes (string, units) {
   units = units || Infinity
-  let codePoint
-  const length = string.length
-  let leadSurrogate = null
-  const bytes = []
+  var codePoint
+  var length = string.length
+  var leadSurrogate = null
+  var bytes = []
 
-  for (let i = 0; i < length; ++i) {
+  for (var i = 0; i < length; ++i) {
     codePoint = string.charCodeAt(i)
 
     // is surrogate component
@@ -9108,8 +8832,8 @@ function utf8ToBytes (string, units) {
 }
 
 function asciiToBytes (str) {
-  const byteArray = []
-  for (let i = 0; i < str.length; ++i) {
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
     // Node's code seems to be doing this and not & 0x7F..
     byteArray.push(str.charCodeAt(i) & 0xFF)
   }
@@ -9117,9 +8841,9 @@ function asciiToBytes (str) {
 }
 
 function utf16leToBytes (str, units) {
-  let c, hi, lo
-  const byteArray = []
-  for (let i = 0; i < str.length; ++i) {
+  var c, hi, lo
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
     if ((units -= 2) < 0) break
 
     c = str.charCodeAt(i)
@@ -9137,51 +8861,18 @@ function base64ToBytes (str) {
 }
 
 function blitBuffer (src, dst, offset, length) {
-  let i
-  for (i = 0; i < length; ++i) {
+  for (var i = 0; i < length; ++i) {
     if ((i + offset >= dst.length) || (i >= src.length)) break
     dst[i + offset] = src[i]
   }
   return i
 }
 
-// ArrayBuffer or Uint8Array objects from other contexts (i.e. iframes) do not pass
-// the `instanceof` check but they should be treated as of that type.
-// See: https://github.com/feross/buffer/issues/166
-function isInstance (obj, type) {
-  return obj instanceof type ||
-    (obj != null && obj.constructor != null && obj.constructor.name != null &&
-      obj.constructor.name === type.name)
-}
-function numberIsNaN (obj) {
-  // For IE11 support
-  return obj !== obj // eslint-disable-line no-self-compare
+function isnan (val) {
+  return val !== val // eslint-disable-line no-self-compare
 }
 
-// Create lookup table for `toString('hex')`
-// See: https://github.com/feross/buffer/issues/219
-const hexSliceLookupTable = (function () {
-  const alphabet = '0123456789abcdef'
-  const table = new Array(256)
-  for (let i = 0; i < 16; ++i) {
-    const i16 = i * 16
-    for (let j = 0; j < 16; ++j) {
-      table[i16 + j] = alphabet[i] + alphabet[j]
-    }
-  }
-  return table
-})()
-
-// Return not function with Error if BigInt not supported
-function defineBigIntMethod (fn) {
-  return typeof BigInt === 'undefined' ? BufferBigIntNotDefined : fn
-}
-
-function BufferBigIntNotDefined () {
-  throw new Error('BigInt not supported')
-}
-
-},{"base64-js":"../node_modules/base64-js/index.js","ieee754":"../node_modules/ieee754/index.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/safe-buffer/index.js":[function(require,module,exports) {
+},{"base64-js":"../node_modules/base64-js/index.js","ieee754":"../node_modules/ieee754/index.js","isarray":"../node_modules/isarray/index.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/safe-buffer/index.js":[function(require,module,exports) {
 
 /*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> */
 /* eslint-disable node/no-deprecated-api */
@@ -10019,7 +9710,7 @@ function UTF8Encoder(options) {
 
 exports.TextEncoder = TextEncoder;
 exports.TextDecoder = TextDecoder;
-},{}],"../node_modules/borsh/lib/index.js":[function(require,module,exports) {
+},{}],"../node_modules/near-api-js/node_modules/borsh/lib/index.js":[function(require,module,exports) {
 var global = arguments[3];
 var Buffer = require("buffer").Buffer;
 "use strict";
@@ -10450,7 +10141,7 @@ Object.defineProperty(exports, "BorshError", { enumerable: true, get: function (
 Object.defineProperty(exports, "BinaryWriter", { enumerable: true, get: function () { return borsh_1.BinaryWriter; } });
 Object.defineProperty(exports, "BinaryReader", { enumerable: true, get: function () { return borsh_1.BinaryReader; } });
 
-},{"borsh":"../node_modules/borsh/lib/index.js"}],"../node_modules/near-api-js/lib/utils/enums.js":[function(require,module,exports) {
+},{"borsh":"../node_modules/near-api-js/node_modules/borsh/lib/index.js"}],"../node_modules/near-api-js/lib/utils/enums.js":[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Assignable = exports.Enum = void 0;
@@ -10991,7 +10682,7 @@ function getTransactionLastResult(txResult) {
 }
 exports.getTransactionLastResult = getTransactionLastResult;
 
-},{"buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/node_modules/depd/lib/browser/index.js":[function(require,module,exports) {
+},{"buffer":"../node_modules/buffer/index.js"}],"../node_modules/depd/lib/browser/index.js":[function(require,module,exports) {
 /*!
  * depd
  * Copyright(c) 2015 Douglas Christopher Wilson
@@ -11063,7 +10754,7 @@ function wrapproperty(obj, prop, message) {
     throw new TypeError('property must be configurable');
   }
 }
-},{}],"../node_modules/depd/lib/browser/index.js":[function(require,module,exports) {
+},{}],"../node_modules/http-errors/node_modules/depd/lib/browser/index.js":[function(require,module,exports) {
 /*!
  * depd
  * Copyright(c) 2015 Douglas Christopher Wilson
@@ -11663,7 +11354,7 @@ function populateConstructorExports(exports, codes, HttpError) {
 function toClassName(name) {
   return name.substr(-5) !== 'Error' ? name + 'Error' : name;
 }
-},{"depd":"../node_modules/depd/lib/browser/index.js","setprototypeof":"../node_modules/setprototypeof/index.js","statuses":"../node_modules/statuses/index.js","inherits":"../node_modules/inherits/inherits_browser.js","toidentifier":"../node_modules/toidentifier/index.js"}],"../node_modules/near-api-js/lib/utils/exponential-backoff.js":[function(require,module,exports) {
+},{"depd":"../node_modules/http-errors/node_modules/depd/lib/browser/index.js","setprototypeof":"../node_modules/setprototypeof/index.js","statuses":"../node_modules/statuses/index.js","inherits":"../node_modules/inherits/inherits_browser.js","toidentifier":"../node_modules/toidentifier/index.js"}],"../node_modules/near-api-js/lib/utils/exponential-backoff.js":[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 async function exponentialBackoff(startWaitTime, retryNumber, waitBackoff, getResult) {
@@ -13980,7 +13671,7 @@ class JsonRpcProvider extends provider_1.Provider {
 }
 exports.JsonRpcProvider = JsonRpcProvider;
 
-},{"depd":"../node_modules/near-api-js/node_modules/depd/lib/browser/index.js","./provider":"../node_modules/near-api-js/lib/providers/provider.js","../utils/web":"../node_modules/near-api-js/lib/utils/web.js","../utils/errors":"../node_modules/near-api-js/lib/utils/errors.js","borsh":"../node_modules/borsh/lib/index.js","../utils/exponential-backoff":"../node_modules/near-api-js/lib/utils/exponential-backoff.js","../utils/rpc_errors":"../node_modules/near-api-js/lib/utils/rpc_errors.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/providers/index.js":[function(require,module,exports) {
+},{"depd":"../node_modules/depd/lib/browser/index.js","./provider":"../node_modules/near-api-js/lib/providers/provider.js","../utils/web":"../node_modules/near-api-js/lib/utils/web.js","../utils/errors":"../node_modules/near-api-js/lib/utils/errors.js","borsh":"../node_modules/near-api-js/node_modules/borsh/lib/index.js","../utils/exponential-backoff":"../node_modules/near-api-js/lib/utils/exponential-backoff.js","../utils/rpc_errors":"../node_modules/near-api-js/lib/utils/rpc_errors.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/providers/index.js":[function(require,module,exports) {
 "use strict";
 /** @hidden @module */
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -15120,7 +14811,7 @@ async function signTransaction(...args) {
 }
 exports.signTransaction = signTransaction;
 
-},{"js-sha256":"../node_modules/js-sha256/src/sha256.js","./utils/enums":"../node_modules/near-api-js/lib/utils/enums.js","borsh":"../node_modules/borsh/lib/index.js","./utils/key_pair":"../node_modules/near-api-js/lib/utils/key_pair.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/validators.js":[function(require,module,exports) {
+},{"js-sha256":"../node_modules/js-sha256/src/sha256.js","./utils/enums":"../node_modules/near-api-js/lib/utils/enums.js","borsh":"../node_modules/near-api-js/node_modules/borsh/lib/index.js","./utils/key_pair":"../node_modules/near-api-js/lib/utils/key_pair.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/validators.js":[function(require,module,exports) {
 'use strict';
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -15778,7 +15469,7 @@ class Account {
 }
 
 exports.Account = Account;
-},{"bn.js":"../node_modules/bn.js/lib/bn.js","depd":"../node_modules/near-api-js/node_modules/depd/lib/browser/index.js","./transaction":"../node_modules/near-api-js/lib/transaction.js","./providers":"../node_modules/near-api-js/lib/providers/index.js","borsh":"../node_modules/borsh/lib/index.js","./utils/key_pair":"../node_modules/near-api-js/lib/utils/key_pair.js","./utils/errors":"../node_modules/near-api-js/lib/utils/errors.js","./utils/rpc_errors":"../node_modules/near-api-js/lib/utils/rpc_errors.js","./constants":"../node_modules/near-api-js/lib/constants.js","./utils/exponential-backoff":"../node_modules/near-api-js/lib/utils/exponential-backoff.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/account_multisig.js":[function(require,module,exports) {
+},{"bn.js":"../node_modules/bn.js/lib/bn.js","depd":"../node_modules/depd/lib/browser/index.js","./transaction":"../node_modules/near-api-js/lib/transaction.js","./providers":"../node_modules/near-api-js/lib/providers/index.js","borsh":"../node_modules/near-api-js/node_modules/borsh/lib/index.js","./utils/key_pair":"../node_modules/near-api-js/lib/utils/key_pair.js","./utils/errors":"../node_modules/near-api-js/lib/utils/errors.js","./utils/rpc_errors":"../node_modules/near-api-js/lib/utils/rpc_errors.js","./constants":"../node_modules/near-api-js/lib/constants.js","./utils/exponential-backoff":"../node_modules/near-api-js/lib/utils/exponential-backoff.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/account_multisig.js":[function(require,module,exports) {
 var Buffer = require("buffer").Buffer;
 'use strict';
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -16095,7 +15786,7 @@ const convertActions = (actions, accountId, receiverId) => actions.map((a) => {
     return action;
 });
 
-},{"bn.js":"../node_modules/bn.js/lib/bn.js","depd":"../node_modules/near-api-js/node_modules/depd/lib/browser/index.js","./account":"../node_modules/near-api-js/lib/account.js","./utils/format":"../node_modules/near-api-js/lib/utils/format.js","./utils/key_pair":"../node_modules/near-api-js/lib/utils/key_pair.js","./transaction":"../node_modules/near-api-js/lib/transaction.js","./utils/web":"../node_modules/near-api-js/lib/utils/web.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/account_creator.js":[function(require,module,exports) {
+},{"bn.js":"../node_modules/bn.js/lib/bn.js","depd":"../node_modules/depd/lib/browser/index.js","./account":"../node_modules/near-api-js/lib/account.js","./utils/format":"../node_modules/near-api-js/lib/utils/format.js","./utils/key_pair":"../node_modules/near-api-js/lib/utils/key_pair.js","./transaction":"../node_modules/near-api-js/lib/transaction.js","./utils/web":"../node_modules/near-api-js/lib/utils/web.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/account_creator.js":[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UrlAccountCreator = exports.LocalAccountCreator = exports.AccountCreator = void 0;
@@ -16409,7 +16100,7 @@ function validateBNLike(argMap) {
     }
 }
 
-},{"bn.js":"../node_modules/bn.js/lib/bn.js","depd":"../node_modules/near-api-js/node_modules/depd/lib/browser/index.js","./providers":"../node_modules/near-api-js/lib/providers/index.js","./utils/errors":"../node_modules/near-api-js/lib/utils/errors.js"}],"../node_modules/near-api-js/lib/near.js":[function(require,module,exports) {
+},{"bn.js":"../node_modules/bn.js/lib/bn.js","depd":"../node_modules/depd/lib/browser/index.js","./providers":"../node_modules/near-api-js/lib/providers/index.js","./utils/errors":"../node_modules/near-api-js/lib/utils/errors.js"}],"../node_modules/near-api-js/lib/near.js":[function(require,module,exports) {
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -16823,7 +16514,7 @@ class ConnectedWalletAccount extends account_1.Account {
 }
 exports.ConnectedWalletAccount = ConnectedWalletAccount;
 
-},{"depd":"../node_modules/near-api-js/node_modules/depd/lib/browser/index.js","./account":"../node_modules/near-api-js/lib/account.js","./transaction":"../node_modules/near-api-js/lib/transaction.js","./utils":"../node_modules/near-api-js/lib/utils/index.js","borsh":"../node_modules/borsh/lib/index.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/common-index.js":[function(require,module,exports) {
+},{"depd":"../node_modules/depd/lib/browser/index.js","./account":"../node_modules/near-api-js/lib/account.js","./transaction":"../node_modules/near-api-js/lib/transaction.js","./utils":"../node_modules/near-api-js/lib/utils/index.js","borsh":"../node_modules/near-api-js/node_modules/borsh/lib/index.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/near-api-js/lib/common-index.js":[function(require,module,exports) {
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -17707,6 +17398,18 @@ document.getElementById("sign_in_btn_modal").onclick = /*#__PURE__*/_asyncToGene
 
 document.getElementById("btn-close-pro-create").onclick = function () {
   document.getElementById("create_pro").style.display = "none";
+};
+
+document.getElementById("btn-close_singin").onclick = function () {
+  document.getElementById("modalSignIn").style.display = "none";
+};
+
+document.getElementById("btn-close_donateBox").onclick = function () {
+  document.getElementById("donateBox").style.display = "none";
+};
+
+document.getElementById("btn-close_createpage").onclick = function () {
+  document.getElementById("create_page").style.display = "none";
 };
 
 var img_number = 1;
@@ -27660,7 +27363,7 @@ class Multihashes {
 
 exports.Multihashes = Multihashes;
 
-},{}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/vendor/varint.js":[function(require,module,exports) {
+},{}],"../node_modules/multiformats/cjs/vendor/varint.js":[function(require,module,exports) {
 'use strict';
 
 var encode_1 = encode;
@@ -27719,7 +27422,7 @@ var varint$1 = _brrp_varint;
 
 module.exports = varint$1;
 
-},{}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/varint.js":[function(require,module,exports) {
+},{}],"../node_modules/multiformats/cjs/src/varint.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -27745,7 +27448,7 @@ exports.decode = decode;
 exports.encodeTo = encodeTo;
 exports.encodingLength = encodingLength;
 
-},{"../vendor/varint.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/vendor/varint.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bytes.js":[function(require,module,exports) {
+},{"../vendor/varint.js":"../node_modules/multiformats/cjs/vendor/varint.js"}],"../node_modules/multiformats/cjs/src/bytes.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -27792,7 +27495,7 @@ exports.isBinary = isBinary;
 exports.toHex = toHex;
 exports.toString = toString;
 
-},{}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/hashes/digest.js":[function(require,module,exports) {
+},{}],"../node_modules/multiformats/cjs/src/hashes/digest.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -27841,7 +27544,7 @@ exports.create = create;
 exports.decode = decode;
 exports.equals = equals;
 
-},{"../bytes.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bytes.js","../varint.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/varint.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/vendor/base-x.js":[function(require,module,exports) {
+},{"../bytes.js":"../node_modules/multiformats/cjs/src/bytes.js","../varint.js":"../node_modules/multiformats/cjs/src/varint.js"}],"../node_modules/multiformats/cjs/vendor/base-x.js":[function(require,module,exports) {
 'use strict';
 
 function base(ALPHABET, name) {
@@ -27979,7 +27682,7 @@ var _brrp__multiformats_scope_baseX = src;
 
 module.exports = _brrp__multiformats_scope_baseX;
 
-},{}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bases/base.js":[function(require,module,exports) {
+},{}],"../node_modules/multiformats/cjs/src/bases/base.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -28145,7 +27848,7 @@ exports.from = from;
 exports.or = or;
 exports.rfc4648 = rfc4648;
 
-},{"../../vendor/base-x.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/vendor/base-x.js","../bytes.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bases/base58.js":[function(require,module,exports) {
+},{"../../vendor/base-x.js":"../node_modules/multiformats/cjs/vendor/base-x.js","../bytes.js":"../node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/multiformats/cjs/src/bases/base58.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -28166,7 +27869,7 @@ const base58flickr = base.baseX({
 exports.base58btc = base58btc;
 exports.base58flickr = base58flickr;
 
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bases/base32.js":[function(require,module,exports) {
+},{"./base.js":"../node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/multiformats/cjs/src/bases/base32.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -28238,7 +27941,7 @@ exports.base32padupper = base32padupper;
 exports.base32upper = base32upper;
 exports.base32z = base32z;
 
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/cid.js":[function(require,module,exports) {
+},{"./base.js":"../node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/multiformats/cjs/src/cid.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -28555,7 +28258,7 @@ if (cid) {
 
 exports.CID = CID;
 
-},{"./varint.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/varint.js","./hashes/digest.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/hashes/digest.js","./bases/base58.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bases/base58.js","./bases/base32.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bases/base32.js","./bytes.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/cjs/src/pb-decode.js":[function(require,module,exports) {
+},{"./varint.js":"../node_modules/multiformats/cjs/src/varint.js","./hashes/digest.js":"../node_modules/multiformats/cjs/src/hashes/digest.js","./bases/base58.js":"../node_modules/multiformats/cjs/src/bases/base58.js","./bases/base32.js":"../node_modules/multiformats/cjs/src/bases/base32.js","./bytes.js":"../node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/@ipld/dag-pb/cjs/src/pb-decode.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -28705,7 +28408,7 @@ function decodeNode(bytes) {
 
 exports.decodeNode = decodeNode;
 
-},{}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/cjs/src/pb-encode.js":[function(require,module,exports) {
+},{}],"../node_modules/@ipld/dag-pb/cjs/src/pb-encode.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -29086,7 +28789,7 @@ const len8tab = [
 
 exports.encodeNode = encodeNode;
 
-},{}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/cjs/src/util.js":[function(require,module,exports) {
+},{}],"../node_modules/@ipld/dag-pb/cjs/src/util.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -29249,7 +28952,7 @@ exports.createNode = createNode;
 exports.prepare = prepare;
 exports.validate = validate;
 
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/cjs/src/index.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/@ipld/dag-pb/cjs/src/index.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -29321,7 +29024,7 @@ exports.decode = decode;
 exports.encode = encode;
 exports.name = name;
 
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/node_modules/multiformats/cjs/src/cid.js","./pb-decode.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/cjs/src/pb-decode.js","./pb-encode.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/cjs/src/pb-encode.js","./util.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/cjs/src/util.js"}],"../node_modules/cborg/cjs/lib/is.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","./pb-decode.js":"../node_modules/@ipld/dag-pb/cjs/src/pb-decode.js","./pb-encode.js":"../node_modules/@ipld/dag-pb/cjs/src/pb-encode.js","./util.js":"../node_modules/@ipld/dag-pb/cjs/src/util.js"}],"../node_modules/cborg/cjs/lib/is.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -31092,902 +30795,7 @@ exports.decode = decode.decode;
 exports.Token = token.Token;
 exports.Type = token.Type;
 
-},{"./lib/encode.js":"../node_modules/cborg/cjs/lib/encode.js","./lib/decode.js":"../node_modules/cborg/cjs/lib/decode.js","./lib/token.js":"../node_modules/cborg/cjs/lib/token.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/vendor/varint.js":[function(require,module,exports) {
-'use strict';
-
-var encode_1 = encode;
-var MSB = 128, REST = 127, MSBALL = ~REST, INT = Math.pow(2, 31);
-function encode(num, out, offset) {
-  out = out || [];
-  offset = offset || 0;
-  var oldOffset = offset;
-  while (num >= INT) {
-    out[offset++] = num & 255 | MSB;
-    num /= 128;
-  }
-  while (num & MSBALL) {
-    out[offset++] = num & 255 | MSB;
-    num >>>= 7;
-  }
-  out[offset] = num | 0;
-  encode.bytes = offset - oldOffset + 1;
-  return out;
-}
-var decode = read;
-var MSB$1 = 128, REST$1 = 127;
-function read(buf, offset) {
-  var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf.length;
-  do {
-    if (counter >= l) {
-      read.bytes = 0;
-      throw new RangeError('Could not decode varint');
-    }
-    b = buf[counter++];
-    res += shift < 28 ? (b & REST$1) << shift : (b & REST$1) * Math.pow(2, shift);
-    shift += 7;
-  } while (b >= MSB$1);
-  read.bytes = counter - offset;
-  return res;
-}
-var N1 = Math.pow(2, 7);
-var N2 = Math.pow(2, 14);
-var N3 = Math.pow(2, 21);
-var N4 = Math.pow(2, 28);
-var N5 = Math.pow(2, 35);
-var N6 = Math.pow(2, 42);
-var N7 = Math.pow(2, 49);
-var N8 = Math.pow(2, 56);
-var N9 = Math.pow(2, 63);
-var length = function (value) {
-  return value < N1 ? 1 : value < N2 ? 2 : value < N3 ? 3 : value < N4 ? 4 : value < N5 ? 5 : value < N6 ? 6 : value < N7 ? 7 : value < N8 ? 8 : value < N9 ? 9 : 10;
-};
-var varint = {
-  encode: encode_1,
-  decode: decode,
-  encodingLength: length
-};
-var _brrp_varint = varint;
-var varint$1 = _brrp_varint;
-
-module.exports = varint$1;
-
-},{}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/varint.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var varint$1 = require('../vendor/varint.js');
-
-const decode = data => {
-  const code = varint$1.decode(data);
-  return [
-    code,
-    varint$1.decode.bytes
-  ];
-};
-const encodeTo = (int, target, offset = 0) => {
-  varint$1.encode(int, target, offset);
-  return target;
-};
-const encodingLength = int => {
-  return varint$1.encodingLength(int);
-};
-
-exports.decode = decode;
-exports.encodeTo = encodeTo;
-exports.encodingLength = encodingLength;
-
-},{"../vendor/varint.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/vendor/varint.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bytes.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-const empty = new Uint8Array(0);
-const toHex = d => d.reduce((hex, byte) => hex + byte.toString(16).padStart(2, '0'), '');
-const fromHex = hex => {
-  const hexes = hex.match(/../g);
-  return hexes ? new Uint8Array(hexes.map(b => parseInt(b, 16))) : empty;
-};
-const equals = (aa, bb) => {
-  if (aa === bb)
-    return true;
-  if (aa.byteLength !== bb.byteLength) {
-    return false;
-  }
-  for (let ii = 0; ii < aa.byteLength; ii++) {
-    if (aa[ii] !== bb[ii]) {
-      return false;
-    }
-  }
-  return true;
-};
-const coerce = o => {
-  if (o instanceof Uint8Array && o.constructor.name === 'Uint8Array')
-    return o;
-  if (o instanceof ArrayBuffer)
-    return new Uint8Array(o);
-  if (ArrayBuffer.isView(o)) {
-    return new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
-  }
-  throw new Error('Unknown type, must be binary type');
-};
-const isBinary = o => o instanceof ArrayBuffer || ArrayBuffer.isView(o);
-const fromString = str => new TextEncoder().encode(str);
-const toString = b => new TextDecoder().decode(b);
-
-exports.coerce = coerce;
-exports.empty = empty;
-exports.equals = equals;
-exports.fromHex = fromHex;
-exports.fromString = fromString;
-exports.isBinary = isBinary;
-exports.toHex = toHex;
-exports.toString = toString;
-
-},{}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/hashes/digest.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var bytes = require('../bytes.js');
-var varint = require('../varint.js');
-
-const create = (code, digest) => {
-  const size = digest.byteLength;
-  const sizeOffset = varint.encodingLength(code);
-  const digestOffset = sizeOffset + varint.encodingLength(size);
-  const bytes = new Uint8Array(digestOffset + size);
-  varint.encodeTo(code, bytes, 0);
-  varint.encodeTo(size, bytes, sizeOffset);
-  bytes.set(digest, digestOffset);
-  return new Digest(code, size, digest, bytes);
-};
-const decode = multihash => {
-  const bytes$1 = bytes.coerce(multihash);
-  const [code, sizeOffset] = varint.decode(bytes$1);
-  const [size, digestOffset] = varint.decode(bytes$1.subarray(sizeOffset));
-  const digest = bytes$1.subarray(sizeOffset + digestOffset);
-  if (digest.byteLength !== size) {
-    throw new Error('Incorrect length');
-  }
-  return new Digest(code, size, digest, bytes$1);
-};
-const equals = (a, b) => {
-  if (a === b) {
-    return true;
-  } else {
-    return a.code === b.code && a.size === b.size && bytes.equals(a.bytes, b.bytes);
-  }
-};
-class Digest {
-  constructor(code, size, digest, bytes) {
-    this.code = code;
-    this.size = size;
-    this.digest = digest;
-    this.bytes = bytes;
-  }
-}
-
-exports.Digest = Digest;
-exports.create = create;
-exports.decode = decode;
-exports.equals = equals;
-
-},{"../bytes.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bytes.js","../varint.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/varint.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/vendor/base-x.js":[function(require,module,exports) {
-'use strict';
-
-function base(ALPHABET, name) {
-  if (ALPHABET.length >= 255) {
-    throw new TypeError('Alphabet too long');
-  }
-  var BASE_MAP = new Uint8Array(256);
-  for (var j = 0; j < BASE_MAP.length; j++) {
-    BASE_MAP[j] = 255;
-  }
-  for (var i = 0; i < ALPHABET.length; i++) {
-    var x = ALPHABET.charAt(i);
-    var xc = x.charCodeAt(0);
-    if (BASE_MAP[xc] !== 255) {
-      throw new TypeError(x + ' is ambiguous');
-    }
-    BASE_MAP[xc] = i;
-  }
-  var BASE = ALPHABET.length;
-  var LEADER = ALPHABET.charAt(0);
-  var FACTOR = Math.log(BASE) / Math.log(256);
-  var iFACTOR = Math.log(256) / Math.log(BASE);
-  function encode(source) {
-    if (source instanceof Uint8Array);
-    else if (ArrayBuffer.isView(source)) {
-      source = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
-    } else if (Array.isArray(source)) {
-      source = Uint8Array.from(source);
-    }
-    if (!(source instanceof Uint8Array)) {
-      throw new TypeError('Expected Uint8Array');
-    }
-    if (source.length === 0) {
-      return '';
-    }
-    var zeroes = 0;
-    var length = 0;
-    var pbegin = 0;
-    var pend = source.length;
-    while (pbegin !== pend && source[pbegin] === 0) {
-      pbegin++;
-      zeroes++;
-    }
-    var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
-    var b58 = new Uint8Array(size);
-    while (pbegin !== pend) {
-      var carry = source[pbegin];
-      var i = 0;
-      for (var it1 = size - 1; (carry !== 0 || i < length) && it1 !== -1; it1--, i++) {
-        carry += 256 * b58[it1] >>> 0;
-        b58[it1] = carry % BASE >>> 0;
-        carry = carry / BASE >>> 0;
-      }
-      if (carry !== 0) {
-        throw new Error('Non-zero carry');
-      }
-      length = i;
-      pbegin++;
-    }
-    var it2 = size - length;
-    while (it2 !== size && b58[it2] === 0) {
-      it2++;
-    }
-    var str = LEADER.repeat(zeroes);
-    for (; it2 < size; ++it2) {
-      str += ALPHABET.charAt(b58[it2]);
-    }
-    return str;
-  }
-  function decodeUnsafe(source) {
-    if (typeof source !== 'string') {
-      throw new TypeError('Expected String');
-    }
-    if (source.length === 0) {
-      return new Uint8Array();
-    }
-    var psz = 0;
-    if (source[psz] === ' ') {
-      return;
-    }
-    var zeroes = 0;
-    var length = 0;
-    while (source[psz] === LEADER) {
-      zeroes++;
-      psz++;
-    }
-    var size = (source.length - psz) * FACTOR + 1 >>> 0;
-    var b256 = new Uint8Array(size);
-    while (source[psz]) {
-      var carry = BASE_MAP[source.charCodeAt(psz)];
-      if (carry === 255) {
-        return;
-      }
-      var i = 0;
-      for (var it3 = size - 1; (carry !== 0 || i < length) && it3 !== -1; it3--, i++) {
-        carry += BASE * b256[it3] >>> 0;
-        b256[it3] = carry % 256 >>> 0;
-        carry = carry / 256 >>> 0;
-      }
-      if (carry !== 0) {
-        throw new Error('Non-zero carry');
-      }
-      length = i;
-      psz++;
-    }
-    if (source[psz] === ' ') {
-      return;
-    }
-    var it4 = size - length;
-    while (it4 !== size && b256[it4] === 0) {
-      it4++;
-    }
-    var vch = new Uint8Array(zeroes + (size - it4));
-    var j = zeroes;
-    while (it4 !== size) {
-      vch[j++] = b256[it4++];
-    }
-    return vch;
-  }
-  function decode(string) {
-    var buffer = decodeUnsafe(string);
-    if (buffer) {
-      return buffer;
-    }
-    throw new Error(`Non-${ name } character`);
-  }
-  return {
-    encode: encode,
-    decodeUnsafe: decodeUnsafe,
-    decode: decode
-  };
-}
-var src = base;
-var _brrp__multiformats_scope_baseX = src;
-
-module.exports = _brrp__multiformats_scope_baseX;
-
-},{}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bases/base.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var baseX$1 = require('../../vendor/base-x.js');
-var bytes = require('../bytes.js');
-
-class Encoder {
-  constructor(name, prefix, baseEncode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseEncode = baseEncode;
-  }
-  encode(bytes) {
-    if (bytes instanceof Uint8Array) {
-      return `${ this.prefix }${ this.baseEncode(bytes) }`;
-    } else {
-      throw Error('Unknown type, must be binary type');
-    }
-  }
-}
-class Decoder {
-  constructor(name, prefix, baseDecode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseDecode = baseDecode;
-  }
-  decode(text) {
-    if (typeof text === 'string') {
-      switch (text[0]) {
-      case this.prefix: {
-          return this.baseDecode(text.slice(1));
-        }
-      default: {
-          throw Error(`Unable to decode multibase string ${ JSON.stringify(text) }, ${ this.name } decoder only supports inputs prefixed with ${ this.prefix }`);
-        }
-      }
-    } else {
-      throw Error('Can only multibase decode strings');
-    }
-  }
-  or(decoder) {
-    return or(this, decoder);
-  }
-}
-class ComposedDecoder {
-  constructor(decoders) {
-    this.decoders = decoders;
-  }
-  or(decoder) {
-    return or(this, decoder);
-  }
-  decode(input) {
-    const prefix = input[0];
-    const decoder = this.decoders[prefix];
-    if (decoder) {
-      return decoder.decode(input);
-    } else {
-      throw RangeError(`Unable to decode multibase string ${ JSON.stringify(input) }, only inputs prefixed with ${ Object.keys(this.decoders) } are supported`);
-    }
-  }
-}
-const or = (left, right) => new ComposedDecoder({
-  ...left.decoders || { [left.prefix]: left },
-  ...right.decoders || { [right.prefix]: right }
-});
-class Codec {
-  constructor(name, prefix, baseEncode, baseDecode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseEncode = baseEncode;
-    this.baseDecode = baseDecode;
-    this.encoder = new Encoder(name, prefix, baseEncode);
-    this.decoder = new Decoder(name, prefix, baseDecode);
-  }
-  encode(input) {
-    return this.encoder.encode(input);
-  }
-  decode(input) {
-    return this.decoder.decode(input);
-  }
-}
-const from = ({name, prefix, encode, decode}) => new Codec(name, prefix, encode, decode);
-const baseX = ({prefix, name, alphabet}) => {
-  const {encode, decode} = baseX$1(alphabet, name);
-  return from({
-    prefix,
-    name,
-    encode,
-    decode: text => bytes.coerce(decode(text))
-  });
-};
-const decode = (string, alphabet, bitsPerChar, name) => {
-  const codes = {};
-  for (let i = 0; i < alphabet.length; ++i) {
-    codes[alphabet[i]] = i;
-  }
-  let end = string.length;
-  while (string[end - 1] === '=') {
-    --end;
-  }
-  const out = new Uint8Array(end * bitsPerChar / 8 | 0);
-  let bits = 0;
-  let buffer = 0;
-  let written = 0;
-  for (let i = 0; i < end; ++i) {
-    const value = codes[string[i]];
-    if (value === undefined) {
-      throw new SyntaxError(`Non-${ name } character`);
-    }
-    buffer = buffer << bitsPerChar | value;
-    bits += bitsPerChar;
-    if (bits >= 8) {
-      bits -= 8;
-      out[written++] = 255 & buffer >> bits;
-    }
-  }
-  if (bits >= bitsPerChar || 255 & buffer << 8 - bits) {
-    throw new SyntaxError('Unexpected end of data');
-  }
-  return out;
-};
-const encode = (data, alphabet, bitsPerChar) => {
-  const pad = alphabet[alphabet.length - 1] === '=';
-  const mask = (1 << bitsPerChar) - 1;
-  let out = '';
-  let bits = 0;
-  let buffer = 0;
-  for (let i = 0; i < data.length; ++i) {
-    buffer = buffer << 8 | data[i];
-    bits += 8;
-    while (bits > bitsPerChar) {
-      bits -= bitsPerChar;
-      out += alphabet[mask & buffer >> bits];
-    }
-  }
-  if (bits) {
-    out += alphabet[mask & buffer << bitsPerChar - bits];
-  }
-  if (pad) {
-    while (out.length * bitsPerChar & 7) {
-      out += '=';
-    }
-  }
-  return out;
-};
-const rfc4648 = ({name, prefix, bitsPerChar, alphabet}) => {
-  return from({
-    prefix,
-    name,
-    encode(input) {
-      return encode(input, alphabet, bitsPerChar);
-    },
-    decode(input) {
-      return decode(input, alphabet, bitsPerChar, name);
-    }
-  });
-};
-
-exports.Codec = Codec;
-exports.baseX = baseX;
-exports.from = from;
-exports.or = or;
-exports.rfc4648 = rfc4648;
-
-},{"../../vendor/base-x.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/vendor/base-x.js","../bytes.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bases/base58.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base58btc = base.baseX({
-  name: 'base58btc',
-  prefix: 'z',
-  alphabet: '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-});
-const base58flickr = base.baseX({
-  name: 'base58flickr',
-  prefix: 'Z',
-  alphabet: '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
-});
-
-exports.base58btc = base58btc;
-exports.base58flickr = base58flickr;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bases/base32.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base32 = base.rfc4648({
-  prefix: 'b',
-  name: 'base32',
-  alphabet: 'abcdefghijklmnopqrstuvwxyz234567',
-  bitsPerChar: 5
-});
-const base32upper = base.rfc4648({
-  prefix: 'B',
-  name: 'base32upper',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
-  bitsPerChar: 5
-});
-const base32pad = base.rfc4648({
-  prefix: 'c',
-  name: 'base32pad',
-  alphabet: 'abcdefghijklmnopqrstuvwxyz234567=',
-  bitsPerChar: 5
-});
-const base32padupper = base.rfc4648({
-  prefix: 'C',
-  name: 'base32padupper',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=',
-  bitsPerChar: 5
-});
-const base32hex = base.rfc4648({
-  prefix: 'v',
-  name: 'base32hex',
-  alphabet: '0123456789abcdefghijklmnopqrstuv',
-  bitsPerChar: 5
-});
-const base32hexupper = base.rfc4648({
-  prefix: 'V',
-  name: 'base32hexupper',
-  alphabet: '0123456789ABCDEFGHIJKLMNOPQRSTUV',
-  bitsPerChar: 5
-});
-const base32hexpad = base.rfc4648({
-  prefix: 't',
-  name: 'base32hexpad',
-  alphabet: '0123456789abcdefghijklmnopqrstuv=',
-  bitsPerChar: 5
-});
-const base32hexpadupper = base.rfc4648({
-  prefix: 'T',
-  name: 'base32hexpadupper',
-  alphabet: '0123456789ABCDEFGHIJKLMNOPQRSTUV=',
-  bitsPerChar: 5
-});
-const base32z = base.rfc4648({
-  prefix: 'h',
-  name: 'base32z',
-  alphabet: 'ybndrfg8ejkmcpqxot1uwisza345h769',
-  bitsPerChar: 5
-});
-
-exports.base32 = base32;
-exports.base32hex = base32hex;
-exports.base32hexpad = base32hexpad;
-exports.base32hexpadupper = base32hexpadupper;
-exports.base32hexupper = base32hexupper;
-exports.base32pad = base32pad;
-exports.base32padupper = base32padupper;
-exports.base32upper = base32upper;
-exports.base32z = base32z;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/cid.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var varint = require('./varint.js');
-var digest = require('./hashes/digest.js');
-var base58 = require('./bases/base58.js');
-var base32 = require('./bases/base32.js');
-var bytes = require('./bytes.js');
-
-class CID {
-  constructor(version, code, multihash, bytes) {
-    this.code = code;
-    this.version = version;
-    this.multihash = multihash;
-    this.bytes = bytes;
-    this.byteOffset = bytes.byteOffset;
-    this.byteLength = bytes.byteLength;
-    this.asCID = this;
-    this._baseCache = new Map();
-    Object.defineProperties(this, {
-      byteOffset: hidden,
-      byteLength: hidden,
-      code: readonly,
-      version: readonly,
-      multihash: readonly,
-      bytes: readonly,
-      _baseCache: hidden,
-      asCID: hidden
-    });
-  }
-  toV0() {
-    switch (this.version) {
-    case 0: {
-        return this;
-      }
-    default: {
-        const {code, multihash} = this;
-        if (code !== DAG_PB_CODE) {
-          throw new Error('Cannot convert a non dag-pb CID to CIDv0');
-        }
-        if (multihash.code !== SHA_256_CODE) {
-          throw new Error('Cannot convert non sha2-256 multihash CID to CIDv0');
-        }
-        return CID.createV0(multihash);
-      }
-    }
-  }
-  toV1() {
-    switch (this.version) {
-    case 0: {
-        const {code, digest: digest$1} = this.multihash;
-        const multihash = digest.create(code, digest$1);
-        return CID.createV1(this.code, multihash);
-      }
-    case 1: {
-        return this;
-      }
-    default: {
-        throw Error(`Can not convert CID version ${ this.version } to version 0. This is a bug please report`);
-      }
-    }
-  }
-  equals(other) {
-    return other && this.code === other.code && this.version === other.version && digest.equals(this.multihash, other.multihash);
-  }
-  toString(base) {
-    const {bytes, version, _baseCache} = this;
-    switch (version) {
-    case 0:
-      return toStringV0(bytes, _baseCache, base || base58.base58btc.encoder);
-    default:
-      return toStringV1(bytes, _baseCache, base || base32.base32.encoder);
-    }
-  }
-  toJSON() {
-    return {
-      code: this.code,
-      version: this.version,
-      hash: this.multihash.bytes
-    };
-  }
-  get [Symbol.toStringTag]() {
-    return 'CID';
-  }
-  [Symbol.for('nodejs.util.inspect.custom')]() {
-    return 'CID(' + this.toString() + ')';
-  }
-  static isCID(value) {
-    deprecate(/^0\.0/, IS_CID_DEPRECATION);
-    return !!(value && (value[cidSymbol] || value.asCID === value));
-  }
-  get toBaseEncodedString() {
-    throw new Error('Deprecated, use .toString()');
-  }
-  get codec() {
-    throw new Error('"codec" property is deprecated, use integer "code" property instead');
-  }
-  get buffer() {
-    throw new Error('Deprecated .buffer property, use .bytes to get Uint8Array instead');
-  }
-  get multibaseName() {
-    throw new Error('"multibaseName" property is deprecated');
-  }
-  get prefix() {
-    throw new Error('"prefix" property is deprecated');
-  }
-  static asCID(value) {
-    if (value instanceof CID) {
-      return value;
-    } else if (value != null && value.asCID === value) {
-      const {version, code, multihash, bytes} = value;
-      return new CID(version, code, multihash, bytes || encodeCID(version, code, multihash.bytes));
-    } else if (value != null && value[cidSymbol] === true) {
-      const {version, multihash, code} = value;
-      const digest$1 = digest.decode(multihash);
-      return CID.create(version, code, digest$1);
-    } else {
-      return null;
-    }
-  }
-  static create(version, code, digest) {
-    if (typeof code !== 'number') {
-      throw new Error('String codecs are no longer supported');
-    }
-    switch (version) {
-    case 0: {
-        if (code !== DAG_PB_CODE) {
-          throw new Error(`Version 0 CID must use dag-pb (code: ${ DAG_PB_CODE }) block encoding`);
-        } else {
-          return new CID(version, code, digest, digest.bytes);
-        }
-      }
-    case 1: {
-        const bytes = encodeCID(version, code, digest.bytes);
-        return new CID(version, code, digest, bytes);
-      }
-    default: {
-        throw new Error('Invalid version');
-      }
-    }
-  }
-  static createV0(digest) {
-    return CID.create(0, DAG_PB_CODE, digest);
-  }
-  static createV1(code, digest) {
-    return CID.create(1, code, digest);
-  }
-  static decode(bytes) {
-    const [cid, remainder] = CID.decodeFirst(bytes);
-    if (remainder.length) {
-      throw new Error('Incorrect length');
-    }
-    return cid;
-  }
-  static decodeFirst(bytes$1) {
-    const specs = CID.inspectBytes(bytes$1);
-    const prefixSize = specs.size - specs.multihashSize;
-    const multihashBytes = bytes.coerce(bytes$1.subarray(prefixSize, prefixSize + specs.multihashSize));
-    if (multihashBytes.byteLength !== specs.multihashSize) {
-      throw new Error('Incorrect length');
-    }
-    const digestBytes = multihashBytes.subarray(specs.multihashSize - specs.digestSize);
-    const digest$1 = new digest.Digest(specs.multihashCode, specs.digestSize, digestBytes, multihashBytes);
-    const cid = specs.version === 0 ? CID.createV0(digest$1) : CID.createV1(specs.codec, digest$1);
-    return [
-      cid,
-      bytes$1.subarray(specs.size)
-    ];
-  }
-  static inspectBytes(initialBytes) {
-    let offset = 0;
-    const next = () => {
-      const [i, length] = varint.decode(initialBytes.subarray(offset));
-      offset += length;
-      return i;
-    };
-    let version = next();
-    let codec = DAG_PB_CODE;
-    if (version === 18) {
-      version = 0;
-      offset = 0;
-    } else if (version === 1) {
-      codec = next();
-    }
-    if (version !== 0 && version !== 1) {
-      throw new RangeError(`Invalid CID version ${ version }`);
-    }
-    const prefixSize = offset;
-    const multihashCode = next();
-    const digestSize = next();
-    const size = offset + digestSize;
-    const multihashSize = size - prefixSize;
-    return {
-      version,
-      codec,
-      multihashCode,
-      digestSize,
-      multihashSize,
-      size
-    };
-  }
-  static parse(source, base) {
-    const [prefix, bytes] = parseCIDtoBytes(source, base);
-    const cid = CID.decode(bytes);
-    cid._baseCache.set(prefix, source);
-    return cid;
-  }
-}
-const parseCIDtoBytes = (source, base) => {
-  switch (source[0]) {
-  case 'Q': {
-      const decoder = base || base58.base58btc;
-      return [
-        base58.base58btc.prefix,
-        decoder.decode(`${ base58.base58btc.prefix }${ source }`)
-      ];
-    }
-  case base58.base58btc.prefix: {
-      const decoder = base || base58.base58btc;
-      return [
-        base58.base58btc.prefix,
-        decoder.decode(source)
-      ];
-    }
-  case base32.base32.prefix: {
-      const decoder = base || base32.base32;
-      return [
-        base32.base32.prefix,
-        decoder.decode(source)
-      ];
-    }
-  default: {
-      if (base == null) {
-        throw Error('To parse non base32 or base58btc encoded CID multibase decoder must be provided');
-      }
-      return [
-        source[0],
-        base.decode(source)
-      ];
-    }
-  }
-};
-const toStringV0 = (bytes, cache, base) => {
-  const {prefix} = base;
-  if (prefix !== base58.base58btc.prefix) {
-    throw Error(`Cannot string encode V0 in ${ base.name } encoding`);
-  }
-  const cid = cache.get(prefix);
-  if (cid == null) {
-    const cid = base.encode(bytes).slice(1);
-    cache.set(prefix, cid);
-    return cid;
-  } else {
-    return cid;
-  }
-};
-const toStringV1 = (bytes, cache, base) => {
-  const {prefix} = base;
-  const cid = cache.get(prefix);
-  if (cid == null) {
-    const cid = base.encode(bytes);
-    cache.set(prefix, cid);
-    return cid;
-  } else {
-    return cid;
-  }
-};
-const DAG_PB_CODE = 112;
-const SHA_256_CODE = 18;
-const encodeCID = (version, code, multihash) => {
-  const codeOffset = varint.encodingLength(version);
-  const hashOffset = codeOffset + varint.encodingLength(code);
-  const bytes = new Uint8Array(hashOffset + multihash.byteLength);
-  varint.encodeTo(version, bytes, 0);
-  varint.encodeTo(code, bytes, codeOffset);
-  bytes.set(multihash, hashOffset);
-  return bytes;
-};
-const cidSymbol = Symbol.for('@ipld/js-cid/CID');
-const readonly = {
-  writable: false,
-  configurable: false,
-  enumerable: true
-};
-const hidden = {
-  writable: false,
-  enumerable: false,
-  configurable: false
-};
-const version = '0.0.0-dev';
-const deprecate = (range, message) => {
-  if (range.test(version)) {
-    console.warn(message);
-  } else {
-    throw new Error(message);
-  }
-};
-const IS_CID_DEPRECATION = `CID.isCID(v) is deprecated and will be removed in the next major release.
-Following code pattern:
-
-if (CID.isCID(value)) {
-  doSomethingWithCID(value)
-}
-
-Is replaced with:
-
-const cid = CID.asCID(value)
-if (cid) {
-  // Make sure to use cid instead of value
-  doSomethingWithCID(cid)
-}
-`;
-
-exports.CID = CID;
-
-},{"./varint.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/varint.js","./hashes/digest.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/hashes/digest.js","./bases/base58.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bases/base58.js","./bases/base32.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bases/base32.js","./bytes.js":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/cjs/index.js":[function(require,module,exports) {
+},{"./lib/encode.js":"../node_modules/cborg/cjs/lib/encode.js","./lib/decode.js":"../node_modules/cborg/cjs/lib/decode.js","./lib/token.js":"../node_modules/cborg/cjs/lib/token.js"}],"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/cjs/index.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -32078,902 +30886,7 @@ exports.decode = decode;
 exports.encode = encode;
 exports.name = name;
 
-},{"cborg":"../node_modules/cborg/cjs/cborg.js","multiformats/cid":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/multiformats/cjs/vendor/varint.js":[function(require,module,exports) {
-'use strict';
-
-var encode_1 = encode;
-var MSB = 128, REST = 127, MSBALL = ~REST, INT = Math.pow(2, 31);
-function encode(num, out, offset) {
-  out = out || [];
-  offset = offset || 0;
-  var oldOffset = offset;
-  while (num >= INT) {
-    out[offset++] = num & 255 | MSB;
-    num /= 128;
-  }
-  while (num & MSBALL) {
-    out[offset++] = num & 255 | MSB;
-    num >>>= 7;
-  }
-  out[offset] = num | 0;
-  encode.bytes = offset - oldOffset + 1;
-  return out;
-}
-var decode = read;
-var MSB$1 = 128, REST$1 = 127;
-function read(buf, offset) {
-  var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf.length;
-  do {
-    if (counter >= l) {
-      read.bytes = 0;
-      throw new RangeError('Could not decode varint');
-    }
-    b = buf[counter++];
-    res += shift < 28 ? (b & REST$1) << shift : (b & REST$1) * Math.pow(2, shift);
-    shift += 7;
-  } while (b >= MSB$1);
-  read.bytes = counter - offset;
-  return res;
-}
-var N1 = Math.pow(2, 7);
-var N2 = Math.pow(2, 14);
-var N3 = Math.pow(2, 21);
-var N4 = Math.pow(2, 28);
-var N5 = Math.pow(2, 35);
-var N6 = Math.pow(2, 42);
-var N7 = Math.pow(2, 49);
-var N8 = Math.pow(2, 56);
-var N9 = Math.pow(2, 63);
-var length = function (value) {
-  return value < N1 ? 1 : value < N2 ? 2 : value < N3 ? 3 : value < N4 ? 4 : value < N5 ? 5 : value < N6 ? 6 : value < N7 ? 7 : value < N8 ? 8 : value < N9 ? 9 : 10;
-};
-var varint = {
-  encode: encode_1,
-  decode: decode,
-  encodingLength: length
-};
-var _brrp_varint = varint;
-var varint$1 = _brrp_varint;
-
-module.exports = varint$1;
-
-},{}],"../node_modules/multiformats/cjs/src/varint.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var varint$1 = require('../vendor/varint.js');
-
-const decode = data => {
-  const code = varint$1.decode(data);
-  return [
-    code,
-    varint$1.decode.bytes
-  ];
-};
-const encodeTo = (int, target, offset = 0) => {
-  varint$1.encode(int, target, offset);
-  return target;
-};
-const encodingLength = int => {
-  return varint$1.encodingLength(int);
-};
-
-exports.decode = decode;
-exports.encodeTo = encodeTo;
-exports.encodingLength = encodingLength;
-
-},{"../vendor/varint.js":"../node_modules/multiformats/cjs/vendor/varint.js"}],"../node_modules/multiformats/cjs/src/bytes.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-const empty = new Uint8Array(0);
-const toHex = d => d.reduce((hex, byte) => hex + byte.toString(16).padStart(2, '0'), '');
-const fromHex = hex => {
-  const hexes = hex.match(/../g);
-  return hexes ? new Uint8Array(hexes.map(b => parseInt(b, 16))) : empty;
-};
-const equals = (aa, bb) => {
-  if (aa === bb)
-    return true;
-  if (aa.byteLength !== bb.byteLength) {
-    return false;
-  }
-  for (let ii = 0; ii < aa.byteLength; ii++) {
-    if (aa[ii] !== bb[ii]) {
-      return false;
-    }
-  }
-  return true;
-};
-const coerce = o => {
-  if (o instanceof Uint8Array && o.constructor.name === 'Uint8Array')
-    return o;
-  if (o instanceof ArrayBuffer)
-    return new Uint8Array(o);
-  if (ArrayBuffer.isView(o)) {
-    return new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
-  }
-  throw new Error('Unknown type, must be binary type');
-};
-const isBinary = o => o instanceof ArrayBuffer || ArrayBuffer.isView(o);
-const fromString = str => new TextEncoder().encode(str);
-const toString = b => new TextDecoder().decode(b);
-
-exports.coerce = coerce;
-exports.empty = empty;
-exports.equals = equals;
-exports.fromHex = fromHex;
-exports.fromString = fromString;
-exports.isBinary = isBinary;
-exports.toHex = toHex;
-exports.toString = toString;
-
-},{}],"../node_modules/multiformats/cjs/src/hashes/digest.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var bytes = require('../bytes.js');
-var varint = require('../varint.js');
-
-const create = (code, digest) => {
-  const size = digest.byteLength;
-  const sizeOffset = varint.encodingLength(code);
-  const digestOffset = sizeOffset + varint.encodingLength(size);
-  const bytes = new Uint8Array(digestOffset + size);
-  varint.encodeTo(code, bytes, 0);
-  varint.encodeTo(size, bytes, sizeOffset);
-  bytes.set(digest, digestOffset);
-  return new Digest(code, size, digest, bytes);
-};
-const decode = multihash => {
-  const bytes$1 = bytes.coerce(multihash);
-  const [code, sizeOffset] = varint.decode(bytes$1);
-  const [size, digestOffset] = varint.decode(bytes$1.subarray(sizeOffset));
-  const digest = bytes$1.subarray(sizeOffset + digestOffset);
-  if (digest.byteLength !== size) {
-    throw new Error('Incorrect length');
-  }
-  return new Digest(code, size, digest, bytes$1);
-};
-const equals = (a, b) => {
-  if (a === b) {
-    return true;
-  } else {
-    return a.code === b.code && a.size === b.size && bytes.equals(a.bytes, b.bytes);
-  }
-};
-class Digest {
-  constructor(code, size, digest, bytes) {
-    this.code = code;
-    this.size = size;
-    this.digest = digest;
-    this.bytes = bytes;
-  }
-}
-
-exports.Digest = Digest;
-exports.create = create;
-exports.decode = decode;
-exports.equals = equals;
-
-},{"../bytes.js":"../node_modules/multiformats/cjs/src/bytes.js","../varint.js":"../node_modules/multiformats/cjs/src/varint.js"}],"../node_modules/multiformats/cjs/vendor/base-x.js":[function(require,module,exports) {
-'use strict';
-
-function base(ALPHABET, name) {
-  if (ALPHABET.length >= 255) {
-    throw new TypeError('Alphabet too long');
-  }
-  var BASE_MAP = new Uint8Array(256);
-  for (var j = 0; j < BASE_MAP.length; j++) {
-    BASE_MAP[j] = 255;
-  }
-  for (var i = 0; i < ALPHABET.length; i++) {
-    var x = ALPHABET.charAt(i);
-    var xc = x.charCodeAt(0);
-    if (BASE_MAP[xc] !== 255) {
-      throw new TypeError(x + ' is ambiguous');
-    }
-    BASE_MAP[xc] = i;
-  }
-  var BASE = ALPHABET.length;
-  var LEADER = ALPHABET.charAt(0);
-  var FACTOR = Math.log(BASE) / Math.log(256);
-  var iFACTOR = Math.log(256) / Math.log(BASE);
-  function encode(source) {
-    if (source instanceof Uint8Array);
-    else if (ArrayBuffer.isView(source)) {
-      source = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
-    } else if (Array.isArray(source)) {
-      source = Uint8Array.from(source);
-    }
-    if (!(source instanceof Uint8Array)) {
-      throw new TypeError('Expected Uint8Array');
-    }
-    if (source.length === 0) {
-      return '';
-    }
-    var zeroes = 0;
-    var length = 0;
-    var pbegin = 0;
-    var pend = source.length;
-    while (pbegin !== pend && source[pbegin] === 0) {
-      pbegin++;
-      zeroes++;
-    }
-    var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
-    var b58 = new Uint8Array(size);
-    while (pbegin !== pend) {
-      var carry = source[pbegin];
-      var i = 0;
-      for (var it1 = size - 1; (carry !== 0 || i < length) && it1 !== -1; it1--, i++) {
-        carry += 256 * b58[it1] >>> 0;
-        b58[it1] = carry % BASE >>> 0;
-        carry = carry / BASE >>> 0;
-      }
-      if (carry !== 0) {
-        throw new Error('Non-zero carry');
-      }
-      length = i;
-      pbegin++;
-    }
-    var it2 = size - length;
-    while (it2 !== size && b58[it2] === 0) {
-      it2++;
-    }
-    var str = LEADER.repeat(zeroes);
-    for (; it2 < size; ++it2) {
-      str += ALPHABET.charAt(b58[it2]);
-    }
-    return str;
-  }
-  function decodeUnsafe(source) {
-    if (typeof source !== 'string') {
-      throw new TypeError('Expected String');
-    }
-    if (source.length === 0) {
-      return new Uint8Array();
-    }
-    var psz = 0;
-    if (source[psz] === ' ') {
-      return;
-    }
-    var zeroes = 0;
-    var length = 0;
-    while (source[psz] === LEADER) {
-      zeroes++;
-      psz++;
-    }
-    var size = (source.length - psz) * FACTOR + 1 >>> 0;
-    var b256 = new Uint8Array(size);
-    while (source[psz]) {
-      var carry = BASE_MAP[source.charCodeAt(psz)];
-      if (carry === 255) {
-        return;
-      }
-      var i = 0;
-      for (var it3 = size - 1; (carry !== 0 || i < length) && it3 !== -1; it3--, i++) {
-        carry += BASE * b256[it3] >>> 0;
-        b256[it3] = carry % 256 >>> 0;
-        carry = carry / 256 >>> 0;
-      }
-      if (carry !== 0) {
-        throw new Error('Non-zero carry');
-      }
-      length = i;
-      psz++;
-    }
-    if (source[psz] === ' ') {
-      return;
-    }
-    var it4 = size - length;
-    while (it4 !== size && b256[it4] === 0) {
-      it4++;
-    }
-    var vch = new Uint8Array(zeroes + (size - it4));
-    var j = zeroes;
-    while (it4 !== size) {
-      vch[j++] = b256[it4++];
-    }
-    return vch;
-  }
-  function decode(string) {
-    var buffer = decodeUnsafe(string);
-    if (buffer) {
-      return buffer;
-    }
-    throw new Error(`Non-${ name } character`);
-  }
-  return {
-    encode: encode,
-    decodeUnsafe: decodeUnsafe,
-    decode: decode
-  };
-}
-var src = base;
-var _brrp__multiformats_scope_baseX = src;
-
-module.exports = _brrp__multiformats_scope_baseX;
-
-},{}],"../node_modules/multiformats/cjs/src/bases/base.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var baseX$1 = require('../../vendor/base-x.js');
-var bytes = require('../bytes.js');
-
-class Encoder {
-  constructor(name, prefix, baseEncode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseEncode = baseEncode;
-  }
-  encode(bytes) {
-    if (bytes instanceof Uint8Array) {
-      return `${ this.prefix }${ this.baseEncode(bytes) }`;
-    } else {
-      throw Error('Unknown type, must be binary type');
-    }
-  }
-}
-class Decoder {
-  constructor(name, prefix, baseDecode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseDecode = baseDecode;
-  }
-  decode(text) {
-    if (typeof text === 'string') {
-      switch (text[0]) {
-      case this.prefix: {
-          return this.baseDecode(text.slice(1));
-        }
-      default: {
-          throw Error(`Unable to decode multibase string ${ JSON.stringify(text) }, ${ this.name } decoder only supports inputs prefixed with ${ this.prefix }`);
-        }
-      }
-    } else {
-      throw Error('Can only multibase decode strings');
-    }
-  }
-  or(decoder) {
-    return or(this, decoder);
-  }
-}
-class ComposedDecoder {
-  constructor(decoders) {
-    this.decoders = decoders;
-  }
-  or(decoder) {
-    return or(this, decoder);
-  }
-  decode(input) {
-    const prefix = input[0];
-    const decoder = this.decoders[prefix];
-    if (decoder) {
-      return decoder.decode(input);
-    } else {
-      throw RangeError(`Unable to decode multibase string ${ JSON.stringify(input) }, only inputs prefixed with ${ Object.keys(this.decoders) } are supported`);
-    }
-  }
-}
-const or = (left, right) => new ComposedDecoder({
-  ...left.decoders || { [left.prefix]: left },
-  ...right.decoders || { [right.prefix]: right }
-});
-class Codec {
-  constructor(name, prefix, baseEncode, baseDecode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseEncode = baseEncode;
-    this.baseDecode = baseDecode;
-    this.encoder = new Encoder(name, prefix, baseEncode);
-    this.decoder = new Decoder(name, prefix, baseDecode);
-  }
-  encode(input) {
-    return this.encoder.encode(input);
-  }
-  decode(input) {
-    return this.decoder.decode(input);
-  }
-}
-const from = ({name, prefix, encode, decode}) => new Codec(name, prefix, encode, decode);
-const baseX = ({prefix, name, alphabet}) => {
-  const {encode, decode} = baseX$1(alphabet, name);
-  return from({
-    prefix,
-    name,
-    encode,
-    decode: text => bytes.coerce(decode(text))
-  });
-};
-const decode = (string, alphabet, bitsPerChar, name) => {
-  const codes = {};
-  for (let i = 0; i < alphabet.length; ++i) {
-    codes[alphabet[i]] = i;
-  }
-  let end = string.length;
-  while (string[end - 1] === '=') {
-    --end;
-  }
-  const out = new Uint8Array(end * bitsPerChar / 8 | 0);
-  let bits = 0;
-  let buffer = 0;
-  let written = 0;
-  for (let i = 0; i < end; ++i) {
-    const value = codes[string[i]];
-    if (value === undefined) {
-      throw new SyntaxError(`Non-${ name } character`);
-    }
-    buffer = buffer << bitsPerChar | value;
-    bits += bitsPerChar;
-    if (bits >= 8) {
-      bits -= 8;
-      out[written++] = 255 & buffer >> bits;
-    }
-  }
-  if (bits >= bitsPerChar || 255 & buffer << 8 - bits) {
-    throw new SyntaxError('Unexpected end of data');
-  }
-  return out;
-};
-const encode = (data, alphabet, bitsPerChar) => {
-  const pad = alphabet[alphabet.length - 1] === '=';
-  const mask = (1 << bitsPerChar) - 1;
-  let out = '';
-  let bits = 0;
-  let buffer = 0;
-  for (let i = 0; i < data.length; ++i) {
-    buffer = buffer << 8 | data[i];
-    bits += 8;
-    while (bits > bitsPerChar) {
-      bits -= bitsPerChar;
-      out += alphabet[mask & buffer >> bits];
-    }
-  }
-  if (bits) {
-    out += alphabet[mask & buffer << bitsPerChar - bits];
-  }
-  if (pad) {
-    while (out.length * bitsPerChar & 7) {
-      out += '=';
-    }
-  }
-  return out;
-};
-const rfc4648 = ({name, prefix, bitsPerChar, alphabet}) => {
-  return from({
-    prefix,
-    name,
-    encode(input) {
-      return encode(input, alphabet, bitsPerChar);
-    },
-    decode(input) {
-      return decode(input, alphabet, bitsPerChar, name);
-    }
-  });
-};
-
-exports.Codec = Codec;
-exports.baseX = baseX;
-exports.from = from;
-exports.or = or;
-exports.rfc4648 = rfc4648;
-
-},{"../../vendor/base-x.js":"../node_modules/multiformats/cjs/vendor/base-x.js","../bytes.js":"../node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/multiformats/cjs/src/bases/base58.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base58btc = base.baseX({
-  name: 'base58btc',
-  prefix: 'z',
-  alphabet: '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-});
-const base58flickr = base.baseX({
-  name: 'base58flickr',
-  prefix: 'Z',
-  alphabet: '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
-});
-
-exports.base58btc = base58btc;
-exports.base58flickr = base58flickr;
-
-},{"./base.js":"../node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/multiformats/cjs/src/bases/base32.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base32 = base.rfc4648({
-  prefix: 'b',
-  name: 'base32',
-  alphabet: 'abcdefghijklmnopqrstuvwxyz234567',
-  bitsPerChar: 5
-});
-const base32upper = base.rfc4648({
-  prefix: 'B',
-  name: 'base32upper',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
-  bitsPerChar: 5
-});
-const base32pad = base.rfc4648({
-  prefix: 'c',
-  name: 'base32pad',
-  alphabet: 'abcdefghijklmnopqrstuvwxyz234567=',
-  bitsPerChar: 5
-});
-const base32padupper = base.rfc4648({
-  prefix: 'C',
-  name: 'base32padupper',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=',
-  bitsPerChar: 5
-});
-const base32hex = base.rfc4648({
-  prefix: 'v',
-  name: 'base32hex',
-  alphabet: '0123456789abcdefghijklmnopqrstuv',
-  bitsPerChar: 5
-});
-const base32hexupper = base.rfc4648({
-  prefix: 'V',
-  name: 'base32hexupper',
-  alphabet: '0123456789ABCDEFGHIJKLMNOPQRSTUV',
-  bitsPerChar: 5
-});
-const base32hexpad = base.rfc4648({
-  prefix: 't',
-  name: 'base32hexpad',
-  alphabet: '0123456789abcdefghijklmnopqrstuv=',
-  bitsPerChar: 5
-});
-const base32hexpadupper = base.rfc4648({
-  prefix: 'T',
-  name: 'base32hexpadupper',
-  alphabet: '0123456789ABCDEFGHIJKLMNOPQRSTUV=',
-  bitsPerChar: 5
-});
-const base32z = base.rfc4648({
-  prefix: 'h',
-  name: 'base32z',
-  alphabet: 'ybndrfg8ejkmcpqxot1uwisza345h769',
-  bitsPerChar: 5
-});
-
-exports.base32 = base32;
-exports.base32hex = base32hex;
-exports.base32hexpad = base32hexpad;
-exports.base32hexpadupper = base32hexpadupper;
-exports.base32hexupper = base32hexupper;
-exports.base32pad = base32pad;
-exports.base32padupper = base32padupper;
-exports.base32upper = base32upper;
-exports.base32z = base32z;
-
-},{"./base.js":"../node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/multiformats/cjs/src/cid.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var varint = require('./varint.js');
-var digest = require('./hashes/digest.js');
-var base58 = require('./bases/base58.js');
-var base32 = require('./bases/base32.js');
-var bytes = require('./bytes.js');
-
-class CID {
-  constructor(version, code, multihash, bytes) {
-    this.code = code;
-    this.version = version;
-    this.multihash = multihash;
-    this.bytes = bytes;
-    this.byteOffset = bytes.byteOffset;
-    this.byteLength = bytes.byteLength;
-    this.asCID = this;
-    this._baseCache = new Map();
-    Object.defineProperties(this, {
-      byteOffset: hidden,
-      byteLength: hidden,
-      code: readonly,
-      version: readonly,
-      multihash: readonly,
-      bytes: readonly,
-      _baseCache: hidden,
-      asCID: hidden
-    });
-  }
-  toV0() {
-    switch (this.version) {
-    case 0: {
-        return this;
-      }
-    default: {
-        const {code, multihash} = this;
-        if (code !== DAG_PB_CODE) {
-          throw new Error('Cannot convert a non dag-pb CID to CIDv0');
-        }
-        if (multihash.code !== SHA_256_CODE) {
-          throw new Error('Cannot convert non sha2-256 multihash CID to CIDv0');
-        }
-        return CID.createV0(multihash);
-      }
-    }
-  }
-  toV1() {
-    switch (this.version) {
-    case 0: {
-        const {code, digest: digest$1} = this.multihash;
-        const multihash = digest.create(code, digest$1);
-        return CID.createV1(this.code, multihash);
-      }
-    case 1: {
-        return this;
-      }
-    default: {
-        throw Error(`Can not convert CID version ${ this.version } to version 0. This is a bug please report`);
-      }
-    }
-  }
-  equals(other) {
-    return other && this.code === other.code && this.version === other.version && digest.equals(this.multihash, other.multihash);
-  }
-  toString(base) {
-    const {bytes, version, _baseCache} = this;
-    switch (version) {
-    case 0:
-      return toStringV0(bytes, _baseCache, base || base58.base58btc.encoder);
-    default:
-      return toStringV1(bytes, _baseCache, base || base32.base32.encoder);
-    }
-  }
-  toJSON() {
-    return {
-      code: this.code,
-      version: this.version,
-      hash: this.multihash.bytes
-    };
-  }
-  get [Symbol.toStringTag]() {
-    return 'CID';
-  }
-  [Symbol.for('nodejs.util.inspect.custom')]() {
-    return 'CID(' + this.toString() + ')';
-  }
-  static isCID(value) {
-    deprecate(/^0\.0/, IS_CID_DEPRECATION);
-    return !!(value && (value[cidSymbol] || value.asCID === value));
-  }
-  get toBaseEncodedString() {
-    throw new Error('Deprecated, use .toString()');
-  }
-  get codec() {
-    throw new Error('"codec" property is deprecated, use integer "code" property instead');
-  }
-  get buffer() {
-    throw new Error('Deprecated .buffer property, use .bytes to get Uint8Array instead');
-  }
-  get multibaseName() {
-    throw new Error('"multibaseName" property is deprecated');
-  }
-  get prefix() {
-    throw new Error('"prefix" property is deprecated');
-  }
-  static asCID(value) {
-    if (value instanceof CID) {
-      return value;
-    } else if (value != null && value.asCID === value) {
-      const {version, code, multihash, bytes} = value;
-      return new CID(version, code, multihash, bytes || encodeCID(version, code, multihash.bytes));
-    } else if (value != null && value[cidSymbol] === true) {
-      const {version, multihash, code} = value;
-      const digest$1 = digest.decode(multihash);
-      return CID.create(version, code, digest$1);
-    } else {
-      return null;
-    }
-  }
-  static create(version, code, digest) {
-    if (typeof code !== 'number') {
-      throw new Error('String codecs are no longer supported');
-    }
-    switch (version) {
-    case 0: {
-        if (code !== DAG_PB_CODE) {
-          throw new Error(`Version 0 CID must use dag-pb (code: ${ DAG_PB_CODE }) block encoding`);
-        } else {
-          return new CID(version, code, digest, digest.bytes);
-        }
-      }
-    case 1: {
-        const bytes = encodeCID(version, code, digest.bytes);
-        return new CID(version, code, digest, bytes);
-      }
-    default: {
-        throw new Error('Invalid version');
-      }
-    }
-  }
-  static createV0(digest) {
-    return CID.create(0, DAG_PB_CODE, digest);
-  }
-  static createV1(code, digest) {
-    return CID.create(1, code, digest);
-  }
-  static decode(bytes) {
-    const [cid, remainder] = CID.decodeFirst(bytes);
-    if (remainder.length) {
-      throw new Error('Incorrect length');
-    }
-    return cid;
-  }
-  static decodeFirst(bytes$1) {
-    const specs = CID.inspectBytes(bytes$1);
-    const prefixSize = specs.size - specs.multihashSize;
-    const multihashBytes = bytes.coerce(bytes$1.subarray(prefixSize, prefixSize + specs.multihashSize));
-    if (multihashBytes.byteLength !== specs.multihashSize) {
-      throw new Error('Incorrect length');
-    }
-    const digestBytes = multihashBytes.subarray(specs.multihashSize - specs.digestSize);
-    const digest$1 = new digest.Digest(specs.multihashCode, specs.digestSize, digestBytes, multihashBytes);
-    const cid = specs.version === 0 ? CID.createV0(digest$1) : CID.createV1(specs.codec, digest$1);
-    return [
-      cid,
-      bytes$1.subarray(specs.size)
-    ];
-  }
-  static inspectBytes(initialBytes) {
-    let offset = 0;
-    const next = () => {
-      const [i, length] = varint.decode(initialBytes.subarray(offset));
-      offset += length;
-      return i;
-    };
-    let version = next();
-    let codec = DAG_PB_CODE;
-    if (version === 18) {
-      version = 0;
-      offset = 0;
-    } else if (version === 1) {
-      codec = next();
-    }
-    if (version !== 0 && version !== 1) {
-      throw new RangeError(`Invalid CID version ${ version }`);
-    }
-    const prefixSize = offset;
-    const multihashCode = next();
-    const digestSize = next();
-    const size = offset + digestSize;
-    const multihashSize = size - prefixSize;
-    return {
-      version,
-      codec,
-      multihashCode,
-      digestSize,
-      multihashSize,
-      size
-    };
-  }
-  static parse(source, base) {
-    const [prefix, bytes] = parseCIDtoBytes(source, base);
-    const cid = CID.decode(bytes);
-    cid._baseCache.set(prefix, source);
-    return cid;
-  }
-}
-const parseCIDtoBytes = (source, base) => {
-  switch (source[0]) {
-  case 'Q': {
-      const decoder = base || base58.base58btc;
-      return [
-        base58.base58btc.prefix,
-        decoder.decode(`${ base58.base58btc.prefix }${ source }`)
-      ];
-    }
-  case base58.base58btc.prefix: {
-      const decoder = base || base58.base58btc;
-      return [
-        base58.base58btc.prefix,
-        decoder.decode(source)
-      ];
-    }
-  case base32.base32.prefix: {
-      const decoder = base || base32.base32;
-      return [
-        base32.base32.prefix,
-        decoder.decode(source)
-      ];
-    }
-  default: {
-      if (base == null) {
-        throw Error('To parse non base32 or base58btc encoded CID multibase decoder must be provided');
-      }
-      return [
-        source[0],
-        base.decode(source)
-      ];
-    }
-  }
-};
-const toStringV0 = (bytes, cache, base) => {
-  const {prefix} = base;
-  if (prefix !== base58.base58btc.prefix) {
-    throw Error(`Cannot string encode V0 in ${ base.name } encoding`);
-  }
-  const cid = cache.get(prefix);
-  if (cid == null) {
-    const cid = base.encode(bytes).slice(1);
-    cache.set(prefix, cid);
-    return cid;
-  } else {
-    return cid;
-  }
-};
-const toStringV1 = (bytes, cache, base) => {
-  const {prefix} = base;
-  const cid = cache.get(prefix);
-  if (cid == null) {
-    const cid = base.encode(bytes);
-    cache.set(prefix, cid);
-    return cid;
-  } else {
-    return cid;
-  }
-};
-const DAG_PB_CODE = 112;
-const SHA_256_CODE = 18;
-const encodeCID = (version, code, multihash) => {
-  const codeOffset = varint.encodingLength(version);
-  const hashOffset = codeOffset + varint.encodingLength(code);
-  const bytes = new Uint8Array(hashOffset + multihash.byteLength);
-  varint.encodeTo(version, bytes, 0);
-  varint.encodeTo(code, bytes, codeOffset);
-  bytes.set(multihash, hashOffset);
-  return bytes;
-};
-const cidSymbol = Symbol.for('@ipld/js-cid/CID');
-const readonly = {
-  writable: false,
-  configurable: false,
-  enumerable: true
-};
-const hidden = {
-  writable: false,
-  enumerable: false,
-  configurable: false
-};
-const version = '0.0.0-dev';
-const deprecate = (range, message) => {
-  if (range.test(version)) {
-    console.warn(message);
-  } else {
-    throw new Error(message);
-  }
-};
-const IS_CID_DEPRECATION = `CID.isCID(v) is deprecated and will be removed in the next major release.
-Following code pattern:
-
-if (CID.isCID(value)) {
-  doSomethingWithCID(value)
-}
-
-Is replaced with:
-
-const cid = CID.asCID(value)
-if (cid) {
-  // Make sure to use cid instead of value
-  doSomethingWithCID(cid)
-}
-`;
-
-exports.CID = CID;
-
-},{"./varint.js":"../node_modules/multiformats/cjs/src/varint.js","./hashes/digest.js":"../node_modules/multiformats/cjs/src/hashes/digest.js","./bases/base58.js":"../node_modules/multiformats/cjs/src/bases/base58.js","./bases/base32.js":"../node_modules/multiformats/cjs/src/bases/base32.js","./bytes.js":"../node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/multiformats/cjs/src/hashes/hasher.js":[function(require,module,exports) {
+},{"cborg":"../node_modules/cborg/cjs/cborg.js","multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/multiformats/cjs/src/hashes/hasher.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -33805,395 +31718,7 @@ exports.decode = decode;
 exports.encode = encode;
 exports.name = name;
 
-},{"multiformats":"../node_modules/multiformats/cjs/src/index.js","multiformats/bases/base64":"../node_modules/multiformats/cjs/src/bases/base64.js","cborg":"../node_modules/cborg/cjs/cborg.js","cborg/json":"../node_modules/cborg/cjs/lib/json/json.js"}],"../node_modules/dag-jose/node_modules/multiformats/cjs/vendor/base-x.js":[function(require,module,exports) {
-'use strict';
-
-function base(ALPHABET, name) {
-  if (ALPHABET.length >= 255) {
-    throw new TypeError('Alphabet too long');
-  }
-  var BASE_MAP = new Uint8Array(256);
-  for (var j = 0; j < BASE_MAP.length; j++) {
-    BASE_MAP[j] = 255;
-  }
-  for (var i = 0; i < ALPHABET.length; i++) {
-    var x = ALPHABET.charAt(i);
-    var xc = x.charCodeAt(0);
-    if (BASE_MAP[xc] !== 255) {
-      throw new TypeError(x + ' is ambiguous');
-    }
-    BASE_MAP[xc] = i;
-  }
-  var BASE = ALPHABET.length;
-  var LEADER = ALPHABET.charAt(0);
-  var FACTOR = Math.log(BASE) / Math.log(256);
-  var iFACTOR = Math.log(256) / Math.log(BASE);
-  function encode(source) {
-    if (source instanceof Uint8Array);
-    else if (ArrayBuffer.isView(source)) {
-      source = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
-    } else if (Array.isArray(source)) {
-      source = Uint8Array.from(source);
-    }
-    if (!(source instanceof Uint8Array)) {
-      throw new TypeError('Expected Uint8Array');
-    }
-    if (source.length === 0) {
-      return '';
-    }
-    var zeroes = 0;
-    var length = 0;
-    var pbegin = 0;
-    var pend = source.length;
-    while (pbegin !== pend && source[pbegin] === 0) {
-      pbegin++;
-      zeroes++;
-    }
-    var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
-    var b58 = new Uint8Array(size);
-    while (pbegin !== pend) {
-      var carry = source[pbegin];
-      var i = 0;
-      for (var it1 = size - 1; (carry !== 0 || i < length) && it1 !== -1; it1--, i++) {
-        carry += 256 * b58[it1] >>> 0;
-        b58[it1] = carry % BASE >>> 0;
-        carry = carry / BASE >>> 0;
-      }
-      if (carry !== 0) {
-        throw new Error('Non-zero carry');
-      }
-      length = i;
-      pbegin++;
-    }
-    var it2 = size - length;
-    while (it2 !== size && b58[it2] === 0) {
-      it2++;
-    }
-    var str = LEADER.repeat(zeroes);
-    for (; it2 < size; ++it2) {
-      str += ALPHABET.charAt(b58[it2]);
-    }
-    return str;
-  }
-  function decodeUnsafe(source) {
-    if (typeof source !== 'string') {
-      throw new TypeError('Expected String');
-    }
-    if (source.length === 0) {
-      return new Uint8Array();
-    }
-    var psz = 0;
-    if (source[psz] === ' ') {
-      return;
-    }
-    var zeroes = 0;
-    var length = 0;
-    while (source[psz] === LEADER) {
-      zeroes++;
-      psz++;
-    }
-    var size = (source.length - psz) * FACTOR + 1 >>> 0;
-    var b256 = new Uint8Array(size);
-    while (source[psz]) {
-      var carry = BASE_MAP[source.charCodeAt(psz)];
-      if (carry === 255) {
-        return;
-      }
-      var i = 0;
-      for (var it3 = size - 1; (carry !== 0 || i < length) && it3 !== -1; it3--, i++) {
-        carry += BASE * b256[it3] >>> 0;
-        b256[it3] = carry % 256 >>> 0;
-        carry = carry / 256 >>> 0;
-      }
-      if (carry !== 0) {
-        throw new Error('Non-zero carry');
-      }
-      length = i;
-      psz++;
-    }
-    if (source[psz] === ' ') {
-      return;
-    }
-    var it4 = size - length;
-    while (it4 !== size && b256[it4] === 0) {
-      it4++;
-    }
-    var vch = new Uint8Array(zeroes + (size - it4));
-    var j = zeroes;
-    while (it4 !== size) {
-      vch[j++] = b256[it4++];
-    }
-    return vch;
-  }
-  function decode(string) {
-    var buffer = decodeUnsafe(string);
-    if (buffer) {
-      return buffer;
-    }
-    throw new Error(`Non-${ name } character`);
-  }
-  return {
-    encode: encode,
-    decodeUnsafe: decodeUnsafe,
-    decode: decode
-  };
-}
-var src = base;
-var _brrp__multiformats_scope_baseX = src;
-
-module.exports = _brrp__multiformats_scope_baseX;
-
-},{}],"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bytes.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-const empty = new Uint8Array(0);
-const toHex = d => d.reduce((hex, byte) => hex + byte.toString(16).padStart(2, '0'), '');
-const fromHex = hex => {
-  const hexes = hex.match(/../g);
-  return hexes ? new Uint8Array(hexes.map(b => parseInt(b, 16))) : empty;
-};
-const equals = (aa, bb) => {
-  if (aa === bb)
-    return true;
-  if (aa.byteLength !== bb.byteLength) {
-    return false;
-  }
-  for (let ii = 0; ii < aa.byteLength; ii++) {
-    if (aa[ii] !== bb[ii]) {
-      return false;
-    }
-  }
-  return true;
-};
-const coerce = o => {
-  if (o instanceof Uint8Array && o.constructor.name === 'Uint8Array')
-    return o;
-  if (o instanceof ArrayBuffer)
-    return new Uint8Array(o);
-  if (ArrayBuffer.isView(o)) {
-    return new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
-  }
-  throw new Error('Unknown type, must be binary type');
-};
-const isBinary = o => o instanceof ArrayBuffer || ArrayBuffer.isView(o);
-const fromString = str => new TextEncoder().encode(str);
-const toString = b => new TextDecoder().decode(b);
-
-exports.coerce = coerce;
-exports.empty = empty;
-exports.equals = equals;
-exports.fromHex = fromHex;
-exports.fromString = fromString;
-exports.isBinary = isBinary;
-exports.toHex = toHex;
-exports.toString = toString;
-
-},{}],"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var baseX$1 = require('../../vendor/base-x.js');
-var bytes = require('../bytes.js');
-
-class Encoder {
-  constructor(name, prefix, baseEncode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseEncode = baseEncode;
-  }
-  encode(bytes) {
-    if (bytes instanceof Uint8Array) {
-      return `${ this.prefix }${ this.baseEncode(bytes) }`;
-    } else {
-      throw Error('Unknown type, must be binary type');
-    }
-  }
-}
-class Decoder {
-  constructor(name, prefix, baseDecode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseDecode = baseDecode;
-  }
-  decode(text) {
-    if (typeof text === 'string') {
-      switch (text[0]) {
-      case this.prefix: {
-          return this.baseDecode(text.slice(1));
-        }
-      default: {
-          throw Error(`Unable to decode multibase string ${ JSON.stringify(text) }, ${ this.name } decoder only supports inputs prefixed with ${ this.prefix }`);
-        }
-      }
-    } else {
-      throw Error('Can only multibase decode strings');
-    }
-  }
-  or(decoder) {
-    return or(this, decoder);
-  }
-}
-class ComposedDecoder {
-  constructor(decoders) {
-    this.decoders = decoders;
-  }
-  or(decoder) {
-    return or(this, decoder);
-  }
-  decode(input) {
-    const prefix = input[0];
-    const decoder = this.decoders[prefix];
-    if (decoder) {
-      return decoder.decode(input);
-    } else {
-      throw RangeError(`Unable to decode multibase string ${ JSON.stringify(input) }, only inputs prefixed with ${ Object.keys(this.decoders) } are supported`);
-    }
-  }
-}
-const or = (left, right) => new ComposedDecoder({
-  ...left.decoders || { [left.prefix]: left },
-  ...right.decoders || { [right.prefix]: right }
-});
-class Codec {
-  constructor(name, prefix, baseEncode, baseDecode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseEncode = baseEncode;
-    this.baseDecode = baseDecode;
-    this.encoder = new Encoder(name, prefix, baseEncode);
-    this.decoder = new Decoder(name, prefix, baseDecode);
-  }
-  encode(input) {
-    return this.encoder.encode(input);
-  }
-  decode(input) {
-    return this.decoder.decode(input);
-  }
-}
-const from = ({name, prefix, encode, decode}) => new Codec(name, prefix, encode, decode);
-const baseX = ({prefix, name, alphabet}) => {
-  const {encode, decode} = baseX$1(alphabet, name);
-  return from({
-    prefix,
-    name,
-    encode,
-    decode: text => bytes.coerce(decode(text))
-  });
-};
-const decode = (string, alphabet, bitsPerChar, name) => {
-  const codes = {};
-  for (let i = 0; i < alphabet.length; ++i) {
-    codes[alphabet[i]] = i;
-  }
-  let end = string.length;
-  while (string[end - 1] === '=') {
-    --end;
-  }
-  const out = new Uint8Array(end * bitsPerChar / 8 | 0);
-  let bits = 0;
-  let buffer = 0;
-  let written = 0;
-  for (let i = 0; i < end; ++i) {
-    const value = codes[string[i]];
-    if (value === undefined) {
-      throw new SyntaxError(`Non-${ name } character`);
-    }
-    buffer = buffer << bitsPerChar | value;
-    bits += bitsPerChar;
-    if (bits >= 8) {
-      bits -= 8;
-      out[written++] = 255 & buffer >> bits;
-    }
-  }
-  if (bits >= bitsPerChar || 255 & buffer << 8 - bits) {
-    throw new SyntaxError('Unexpected end of data');
-  }
-  return out;
-};
-const encode = (data, alphabet, bitsPerChar) => {
-  const pad = alphabet[alphabet.length - 1] === '=';
-  const mask = (1 << bitsPerChar) - 1;
-  let out = '';
-  let bits = 0;
-  let buffer = 0;
-  for (let i = 0; i < data.length; ++i) {
-    buffer = buffer << 8 | data[i];
-    bits += 8;
-    while (bits > bitsPerChar) {
-      bits -= bitsPerChar;
-      out += alphabet[mask & buffer >> bits];
-    }
-  }
-  if (bits) {
-    out += alphabet[mask & buffer << bitsPerChar - bits];
-  }
-  if (pad) {
-    while (out.length * bitsPerChar & 7) {
-      out += '=';
-    }
-  }
-  return out;
-};
-const rfc4648 = ({name, prefix, bitsPerChar, alphabet}) => {
-  return from({
-    prefix,
-    name,
-    encode(input) {
-      return encode(input, alphabet, bitsPerChar);
-    },
-    decode(input) {
-      return decode(input, alphabet, bitsPerChar, name);
-    }
-  });
-};
-
-exports.Codec = Codec;
-exports.baseX = baseX;
-exports.from = from;
-exports.or = or;
-exports.rfc4648 = rfc4648;
-
-},{"../../vendor/base-x.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/vendor/base-x.js","../bytes.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base64.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base64 = base.rfc4648({
-  prefix: 'm',
-  name: 'base64',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',
-  bitsPerChar: 6
-});
-const base64pad = base.rfc4648({
-  prefix: 'M',
-  name: 'base64pad',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
-  bitsPerChar: 6
-});
-const base64url = base.rfc4648({
-  prefix: 'u',
-  name: 'base64url',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',
-  bitsPerChar: 6
-});
-const base64urlpad = base.rfc4648({
-  prefix: 'U',
-  name: 'base64urlpad',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=',
-  bitsPerChar: 6
-});
-
-exports.base64 = base64;
-exports.base64pad = base64pad;
-exports.base64url = base64url;
-exports.base64urlpad = base64urlpad;
-
-},{"./base.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/dag-jose/lib/utils.js":[function(require,module,exports) {
+},{"multiformats":"../node_modules/multiformats/cjs/src/index.js","multiformats/bases/base64":"../node_modules/multiformats/cjs/src/bases/base64.js","cborg":"../node_modules/cborg/cjs/cborg.js","cborg/json":"../node_modules/cborg/cjs/lib/json/json.js"}],"../node_modules/dag-jose/lib/utils.js":[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fromBase64url = exports.toBase64url = void 0;
@@ -34207,551 +31732,7 @@ function fromBase64url(s) {
 }
 exports.fromBase64url = fromBase64url;
 
-},{"multiformats/bases/base64":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base64.js"}],"../node_modules/dag-jose/node_modules/multiformats/cjs/vendor/varint.js":[function(require,module,exports) {
-'use strict';
-
-var encode_1 = encode;
-var MSB = 128, REST = 127, MSBALL = ~REST, INT = Math.pow(2, 31);
-function encode(num, out, offset) {
-  out = out || [];
-  offset = offset || 0;
-  var oldOffset = offset;
-  while (num >= INT) {
-    out[offset++] = num & 255 | MSB;
-    num /= 128;
-  }
-  while (num & MSBALL) {
-    out[offset++] = num & 255 | MSB;
-    num >>>= 7;
-  }
-  out[offset] = num | 0;
-  encode.bytes = offset - oldOffset + 1;
-  return out;
-}
-var decode = read;
-var MSB$1 = 128, REST$1 = 127;
-function read(buf, offset) {
-  var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf.length;
-  do {
-    if (counter >= l) {
-      read.bytes = 0;
-      throw new RangeError('Could not decode varint');
-    }
-    b = buf[counter++];
-    res += shift < 28 ? (b & REST$1) << shift : (b & REST$1) * Math.pow(2, shift);
-    shift += 7;
-  } while (b >= MSB$1);
-  read.bytes = counter - offset;
-  return res;
-}
-var N1 = Math.pow(2, 7);
-var N2 = Math.pow(2, 14);
-var N3 = Math.pow(2, 21);
-var N4 = Math.pow(2, 28);
-var N5 = Math.pow(2, 35);
-var N6 = Math.pow(2, 42);
-var N7 = Math.pow(2, 49);
-var N8 = Math.pow(2, 56);
-var N9 = Math.pow(2, 63);
-var length = function (value) {
-  return value < N1 ? 1 : value < N2 ? 2 : value < N3 ? 3 : value < N4 ? 4 : value < N5 ? 5 : value < N6 ? 6 : value < N7 ? 7 : value < N8 ? 8 : value < N9 ? 9 : 10;
-};
-var varint = {
-  encode: encode_1,
-  decode: decode,
-  encodingLength: length
-};
-var _brrp_varint = varint;
-var varint$1 = _brrp_varint;
-
-module.exports = varint$1;
-
-},{}],"../node_modules/dag-jose/node_modules/multiformats/cjs/src/varint.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var varint$1 = require('../vendor/varint.js');
-
-const decode = data => {
-  const code = varint$1.decode(data);
-  return [
-    code,
-    varint$1.decode.bytes
-  ];
-};
-const encodeTo = (int, target, offset = 0) => {
-  varint$1.encode(int, target, offset);
-  return target;
-};
-const encodingLength = int => {
-  return varint$1.encodingLength(int);
-};
-
-exports.decode = decode;
-exports.encodeTo = encodeTo;
-exports.encodingLength = encodingLength;
-
-},{"../vendor/varint.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/vendor/varint.js"}],"../node_modules/dag-jose/node_modules/multiformats/cjs/src/hashes/digest.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var bytes = require('../bytes.js');
-var varint = require('../varint.js');
-
-const create = (code, digest) => {
-  const size = digest.byteLength;
-  const sizeOffset = varint.encodingLength(code);
-  const digestOffset = sizeOffset + varint.encodingLength(size);
-  const bytes = new Uint8Array(digestOffset + size);
-  varint.encodeTo(code, bytes, 0);
-  varint.encodeTo(size, bytes, sizeOffset);
-  bytes.set(digest, digestOffset);
-  return new Digest(code, size, digest, bytes);
-};
-const decode = multihash => {
-  const bytes$1 = bytes.coerce(multihash);
-  const [code, sizeOffset] = varint.decode(bytes$1);
-  const [size, digestOffset] = varint.decode(bytes$1.subarray(sizeOffset));
-  const digest = bytes$1.subarray(sizeOffset + digestOffset);
-  if (digest.byteLength !== size) {
-    throw new Error('Incorrect length');
-  }
-  return new Digest(code, size, digest, bytes$1);
-};
-const equals = (a, b) => {
-  if (a === b) {
-    return true;
-  } else {
-    return a.code === b.code && a.size === b.size && bytes.equals(a.bytes, b.bytes);
-  }
-};
-class Digest {
-  constructor(code, size, digest, bytes) {
-    this.code = code;
-    this.size = size;
-    this.digest = digest;
-    this.bytes = bytes;
-  }
-}
-
-exports.Digest = Digest;
-exports.create = create;
-exports.decode = decode;
-exports.equals = equals;
-
-},{"../bytes.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bytes.js","../varint.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/varint.js"}],"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base58.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base58btc = base.baseX({
-  name: 'base58btc',
-  prefix: 'z',
-  alphabet: '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-});
-const base58flickr = base.baseX({
-  name: 'base58flickr',
-  prefix: 'Z',
-  alphabet: '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
-});
-
-exports.base58btc = base58btc;
-exports.base58flickr = base58flickr;
-
-},{"./base.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base32.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base32 = base.rfc4648({
-  prefix: 'b',
-  name: 'base32',
-  alphabet: 'abcdefghijklmnopqrstuvwxyz234567',
-  bitsPerChar: 5
-});
-const base32upper = base.rfc4648({
-  prefix: 'B',
-  name: 'base32upper',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
-  bitsPerChar: 5
-});
-const base32pad = base.rfc4648({
-  prefix: 'c',
-  name: 'base32pad',
-  alphabet: 'abcdefghijklmnopqrstuvwxyz234567=',
-  bitsPerChar: 5
-});
-const base32padupper = base.rfc4648({
-  prefix: 'C',
-  name: 'base32padupper',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=',
-  bitsPerChar: 5
-});
-const base32hex = base.rfc4648({
-  prefix: 'v',
-  name: 'base32hex',
-  alphabet: '0123456789abcdefghijklmnopqrstuv',
-  bitsPerChar: 5
-});
-const base32hexupper = base.rfc4648({
-  prefix: 'V',
-  name: 'base32hexupper',
-  alphabet: '0123456789ABCDEFGHIJKLMNOPQRSTUV',
-  bitsPerChar: 5
-});
-const base32hexpad = base.rfc4648({
-  prefix: 't',
-  name: 'base32hexpad',
-  alphabet: '0123456789abcdefghijklmnopqrstuv=',
-  bitsPerChar: 5
-});
-const base32hexpadupper = base.rfc4648({
-  prefix: 'T',
-  name: 'base32hexpadupper',
-  alphabet: '0123456789ABCDEFGHIJKLMNOPQRSTUV=',
-  bitsPerChar: 5
-});
-const base32z = base.rfc4648({
-  prefix: 'h',
-  name: 'base32z',
-  alphabet: 'ybndrfg8ejkmcpqxot1uwisza345h769',
-  bitsPerChar: 5
-});
-
-exports.base32 = base32;
-exports.base32hex = base32hex;
-exports.base32hexpad = base32hexpad;
-exports.base32hexpadupper = base32hexpadupper;
-exports.base32hexupper = base32hexupper;
-exports.base32pad = base32pad;
-exports.base32padupper = base32padupper;
-exports.base32upper = base32upper;
-exports.base32z = base32z;
-
-},{"./base.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/dag-jose/node_modules/multiformats/cjs/src/cid.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var varint = require('./varint.js');
-var digest = require('./hashes/digest.js');
-var base58 = require('./bases/base58.js');
-var base32 = require('./bases/base32.js');
-var bytes = require('./bytes.js');
-
-class CID {
-  constructor(version, code, multihash, bytes) {
-    this.code = code;
-    this.version = version;
-    this.multihash = multihash;
-    this.bytes = bytes;
-    this.byteOffset = bytes.byteOffset;
-    this.byteLength = bytes.byteLength;
-    this.asCID = this;
-    this._baseCache = new Map();
-    Object.defineProperties(this, {
-      byteOffset: hidden,
-      byteLength: hidden,
-      code: readonly,
-      version: readonly,
-      multihash: readonly,
-      bytes: readonly,
-      _baseCache: hidden,
-      asCID: hidden
-    });
-  }
-  toV0() {
-    switch (this.version) {
-    case 0: {
-        return this;
-      }
-    default: {
-        const {code, multihash} = this;
-        if (code !== DAG_PB_CODE) {
-          throw new Error('Cannot convert a non dag-pb CID to CIDv0');
-        }
-        if (multihash.code !== SHA_256_CODE) {
-          throw new Error('Cannot convert non sha2-256 multihash CID to CIDv0');
-        }
-        return CID.createV0(multihash);
-      }
-    }
-  }
-  toV1() {
-    switch (this.version) {
-    case 0: {
-        const {code, digest: digest$1} = this.multihash;
-        const multihash = digest.create(code, digest$1);
-        return CID.createV1(this.code, multihash);
-      }
-    case 1: {
-        return this;
-      }
-    default: {
-        throw Error(`Can not convert CID version ${ this.version } to version 0. This is a bug please report`);
-      }
-    }
-  }
-  equals(other) {
-    return other && this.code === other.code && this.version === other.version && digest.equals(this.multihash, other.multihash);
-  }
-  toString(base) {
-    const {bytes, version, _baseCache} = this;
-    switch (version) {
-    case 0:
-      return toStringV0(bytes, _baseCache, base || base58.base58btc.encoder);
-    default:
-      return toStringV1(bytes, _baseCache, base || base32.base32.encoder);
-    }
-  }
-  toJSON() {
-    return {
-      code: this.code,
-      version: this.version,
-      hash: this.multihash.bytes
-    };
-  }
-  get [Symbol.toStringTag]() {
-    return 'CID';
-  }
-  [Symbol.for('nodejs.util.inspect.custom')]() {
-    return 'CID(' + this.toString() + ')';
-  }
-  static isCID(value) {
-    deprecate(/^0\.0/, IS_CID_DEPRECATION);
-    return !!(value && (value[cidSymbol] || value.asCID === value));
-  }
-  get toBaseEncodedString() {
-    throw new Error('Deprecated, use .toString()');
-  }
-  get codec() {
-    throw new Error('"codec" property is deprecated, use integer "code" property instead');
-  }
-  get buffer() {
-    throw new Error('Deprecated .buffer property, use .bytes to get Uint8Array instead');
-  }
-  get multibaseName() {
-    throw new Error('"multibaseName" property is deprecated');
-  }
-  get prefix() {
-    throw new Error('"prefix" property is deprecated');
-  }
-  static asCID(value) {
-    if (value instanceof CID) {
-      return value;
-    } else if (value != null && value.asCID === value) {
-      const {version, code, multihash, bytes} = value;
-      return new CID(version, code, multihash, bytes || encodeCID(version, code, multihash.bytes));
-    } else if (value != null && value[cidSymbol] === true) {
-      const {version, multihash, code} = value;
-      const digest$1 = digest.decode(multihash);
-      return CID.create(version, code, digest$1);
-    } else {
-      return null;
-    }
-  }
-  static create(version, code, digest) {
-    if (typeof code !== 'number') {
-      throw new Error('String codecs are no longer supported');
-    }
-    switch (version) {
-    case 0: {
-        if (code !== DAG_PB_CODE) {
-          throw new Error(`Version 0 CID must use dag-pb (code: ${ DAG_PB_CODE }) block encoding`);
-        } else {
-          return new CID(version, code, digest, digest.bytes);
-        }
-      }
-    case 1: {
-        const bytes = encodeCID(version, code, digest.bytes);
-        return new CID(version, code, digest, bytes);
-      }
-    default: {
-        throw new Error('Invalid version');
-      }
-    }
-  }
-  static createV0(digest) {
-    return CID.create(0, DAG_PB_CODE, digest);
-  }
-  static createV1(code, digest) {
-    return CID.create(1, code, digest);
-  }
-  static decode(bytes) {
-    const [cid, remainder] = CID.decodeFirst(bytes);
-    if (remainder.length) {
-      throw new Error('Incorrect length');
-    }
-    return cid;
-  }
-  static decodeFirst(bytes$1) {
-    const specs = CID.inspectBytes(bytes$1);
-    const prefixSize = specs.size - specs.multihashSize;
-    const multihashBytes = bytes.coerce(bytes$1.subarray(prefixSize, prefixSize + specs.multihashSize));
-    if (multihashBytes.byteLength !== specs.multihashSize) {
-      throw new Error('Incorrect length');
-    }
-    const digestBytes = multihashBytes.subarray(specs.multihashSize - specs.digestSize);
-    const digest$1 = new digest.Digest(specs.multihashCode, specs.digestSize, digestBytes, multihashBytes);
-    const cid = specs.version === 0 ? CID.createV0(digest$1) : CID.createV1(specs.codec, digest$1);
-    return [
-      cid,
-      bytes$1.subarray(specs.size)
-    ];
-  }
-  static inspectBytes(initialBytes) {
-    let offset = 0;
-    const next = () => {
-      const [i, length] = varint.decode(initialBytes.subarray(offset));
-      offset += length;
-      return i;
-    };
-    let version = next();
-    let codec = DAG_PB_CODE;
-    if (version === 18) {
-      version = 0;
-      offset = 0;
-    } else if (version === 1) {
-      codec = next();
-    }
-    if (version !== 0 && version !== 1) {
-      throw new RangeError(`Invalid CID version ${ version }`);
-    }
-    const prefixSize = offset;
-    const multihashCode = next();
-    const digestSize = next();
-    const size = offset + digestSize;
-    const multihashSize = size - prefixSize;
-    return {
-      version,
-      codec,
-      multihashCode,
-      digestSize,
-      multihashSize,
-      size
-    };
-  }
-  static parse(source, base) {
-    const [prefix, bytes] = parseCIDtoBytes(source, base);
-    const cid = CID.decode(bytes);
-    cid._baseCache.set(prefix, source);
-    return cid;
-  }
-}
-const parseCIDtoBytes = (source, base) => {
-  switch (source[0]) {
-  case 'Q': {
-      const decoder = base || base58.base58btc;
-      return [
-        base58.base58btc.prefix,
-        decoder.decode(`${ base58.base58btc.prefix }${ source }`)
-      ];
-    }
-  case base58.base58btc.prefix: {
-      const decoder = base || base58.base58btc;
-      return [
-        base58.base58btc.prefix,
-        decoder.decode(source)
-      ];
-    }
-  case base32.base32.prefix: {
-      const decoder = base || base32.base32;
-      return [
-        base32.base32.prefix,
-        decoder.decode(source)
-      ];
-    }
-  default: {
-      if (base == null) {
-        throw Error('To parse non base32 or base58btc encoded CID multibase decoder must be provided');
-      }
-      return [
-        source[0],
-        base.decode(source)
-      ];
-    }
-  }
-};
-const toStringV0 = (bytes, cache, base) => {
-  const {prefix} = base;
-  if (prefix !== base58.base58btc.prefix) {
-    throw Error(`Cannot string encode V0 in ${ base.name } encoding`);
-  }
-  const cid = cache.get(prefix);
-  if (cid == null) {
-    const cid = base.encode(bytes).slice(1);
-    cache.set(prefix, cid);
-    return cid;
-  } else {
-    return cid;
-  }
-};
-const toStringV1 = (bytes, cache, base) => {
-  const {prefix} = base;
-  const cid = cache.get(prefix);
-  if (cid == null) {
-    const cid = base.encode(bytes);
-    cache.set(prefix, cid);
-    return cid;
-  } else {
-    return cid;
-  }
-};
-const DAG_PB_CODE = 112;
-const SHA_256_CODE = 18;
-const encodeCID = (version, code, multihash) => {
-  const codeOffset = varint.encodingLength(version);
-  const hashOffset = codeOffset + varint.encodingLength(code);
-  const bytes = new Uint8Array(hashOffset + multihash.byteLength);
-  varint.encodeTo(version, bytes, 0);
-  varint.encodeTo(code, bytes, codeOffset);
-  bytes.set(multihash, hashOffset);
-  return bytes;
-};
-const cidSymbol = Symbol.for('@ipld/js-cid/CID');
-const readonly = {
-  writable: false,
-  configurable: false,
-  enumerable: true
-};
-const hidden = {
-  writable: false,
-  enumerable: false,
-  configurable: false
-};
-const version = '0.0.0-dev';
-const deprecate = (range, message) => {
-  if (range.test(version)) {
-    console.warn(message);
-  } else {
-    throw new Error(message);
-  }
-};
-const IS_CID_DEPRECATION = `CID.isCID(v) is deprecated and will be removed in the next major release.
-Following code pattern:
-
-if (CID.isCID(value)) {
-  doSomethingWithCID(value)
-}
-
-Is replaced with:
-
-const cid = CID.asCID(value)
-if (cid) {
-  // Make sure to use cid instead of value
-  doSomethingWithCID(cid)
-}
-`;
-
-exports.CID = CID;
-
-},{"./varint.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/varint.js","./hashes/digest.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/hashes/digest.js","./bases/base58.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base58.js","./bases/base32.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bases/base32.js","./bytes.js":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/dag-jose/lib/signing.js":[function(require,module,exports) {
+},{"multiformats/bases/base64":"../node_modules/multiformats/cjs/src/bases/base64.js"}],"../node_modules/dag-jose/lib/signing.js":[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
@@ -34812,7 +31793,7 @@ exports.default = {
     decode,
 };
 
-},{"./utils":"../node_modules/dag-jose/lib/utils.js","multiformats/cid":"../node_modules/dag-jose/node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/dag-jose/lib/encryption.js":[function(require,module,exports) {
+},{"./utils":"../node_modules/dag-jose/lib/utils.js","multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/dag-jose/lib/encryption.js":[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
@@ -35088,1282 +32069,23 @@ function decode(data) {
 }
 exports.decode = decode;
 
-},{"./signing":"../node_modules/dag-jose/lib/signing.js","./encryption":"../node_modules/dag-jose/lib/encryption.js","@ipld/dag-cbor":"../node_modules/@ipld/dag-cbor/cjs/index.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bytes.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-const empty = new Uint8Array(0);
-const toHex = d => d.reduce((hex, byte) => hex + byte.toString(16).padStart(2, '0'), '');
-const fromHex = hex => {
-  const hexes = hex.match(/../g);
-  return hexes ? new Uint8Array(hexes.map(b => parseInt(b, 16))) : empty;
-};
-const equals = (aa, bb) => {
-  if (aa === bb)
-    return true;
-  if (aa.byteLength !== bb.byteLength) {
-    return false;
-  }
-  for (let ii = 0; ii < aa.byteLength; ii++) {
-    if (aa[ii] !== bb[ii]) {
-      return false;
-    }
-  }
-  return true;
-};
-const coerce = o => {
-  if (o instanceof Uint8Array && o.constructor.name === 'Uint8Array')
-    return o;
-  if (o instanceof ArrayBuffer)
-    return new Uint8Array(o);
-  if (ArrayBuffer.isView(o)) {
-    return new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
-  }
-  throw new Error('Unknown type, must be binary type');
-};
-const isBinary = o => o instanceof ArrayBuffer || ArrayBuffer.isView(o);
-const fromString = str => new TextEncoder().encode(str);
-const toString = b => new TextDecoder().decode(b);
-
-exports.coerce = coerce;
-exports.empty = empty;
-exports.equals = equals;
-exports.fromHex = fromHex;
-exports.fromString = fromString;
-exports.isBinary = isBinary;
-exports.toHex = toHex;
-exports.toString = toString;
-
-},{}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/vendor/varint.js":[function(require,module,exports) {
-'use strict';
-
-var encode_1 = encode;
-var MSB = 128, REST = 127, MSBALL = ~REST, INT = Math.pow(2, 31);
-function encode(num, out, offset) {
-  out = out || [];
-  offset = offset || 0;
-  var oldOffset = offset;
-  while (num >= INT) {
-    out[offset++] = num & 255 | MSB;
-    num /= 128;
-  }
-  while (num & MSBALL) {
-    out[offset++] = num & 255 | MSB;
-    num >>>= 7;
-  }
-  out[offset] = num | 0;
-  encode.bytes = offset - oldOffset + 1;
-  return out;
-}
-var decode = read;
-var MSB$1 = 128, REST$1 = 127;
-function read(buf, offset) {
-  var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf.length;
-  do {
-    if (counter >= l) {
-      read.bytes = 0;
-      throw new RangeError('Could not decode varint');
-    }
-    b = buf[counter++];
-    res += shift < 28 ? (b & REST$1) << shift : (b & REST$1) * Math.pow(2, shift);
-    shift += 7;
-  } while (b >= MSB$1);
-  read.bytes = counter - offset;
-  return res;
-}
-var N1 = Math.pow(2, 7);
-var N2 = Math.pow(2, 14);
-var N3 = Math.pow(2, 21);
-var N4 = Math.pow(2, 28);
-var N5 = Math.pow(2, 35);
-var N6 = Math.pow(2, 42);
-var N7 = Math.pow(2, 49);
-var N8 = Math.pow(2, 56);
-var N9 = Math.pow(2, 63);
-var length = function (value) {
-  return value < N1 ? 1 : value < N2 ? 2 : value < N3 ? 3 : value < N4 ? 4 : value < N5 ? 5 : value < N6 ? 6 : value < N7 ? 7 : value < N8 ? 8 : value < N9 ? 9 : 10;
-};
-var varint = {
-  encode: encode_1,
-  decode: decode,
-  encodingLength: length
-};
-var _brrp_varint = varint;
-var varint$1 = _brrp_varint;
-
-module.exports = varint$1;
-
-},{}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/varint.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var varint$1 = require('../vendor/varint.js');
-
-const decode = data => {
-  const code = varint$1.decode(data);
-  return [
-    code,
-    varint$1.decode.bytes
-  ];
-};
-const encodeTo = (int, target, offset = 0) => {
-  varint$1.encode(int, target, offset);
-  return target;
-};
-const encodingLength = int => {
-  return varint$1.encodingLength(int);
-};
-
-exports.decode = decode;
-exports.encodeTo = encodeTo;
-exports.encodingLength = encodingLength;
-
-},{"../vendor/varint.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/vendor/varint.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/digest.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var bytes = require('../bytes.js');
-var varint = require('../varint.js');
-
-const create = (code, digest) => {
-  const size = digest.byteLength;
-  const sizeOffset = varint.encodingLength(code);
-  const digestOffset = sizeOffset + varint.encodingLength(size);
-  const bytes = new Uint8Array(digestOffset + size);
-  varint.encodeTo(code, bytes, 0);
-  varint.encodeTo(size, bytes, sizeOffset);
-  bytes.set(digest, digestOffset);
-  return new Digest(code, size, digest, bytes);
-};
-const decode = multihash => {
-  const bytes$1 = bytes.coerce(multihash);
-  const [code, sizeOffset] = varint.decode(bytes$1);
-  const [size, digestOffset] = varint.decode(bytes$1.subarray(sizeOffset));
-  const digest = bytes$1.subarray(sizeOffset + digestOffset);
-  if (digest.byteLength !== size) {
-    throw new Error('Incorrect length');
-  }
-  return new Digest(code, size, digest, bytes$1);
-};
-const equals = (a, b) => {
-  if (a === b) {
-    return true;
-  } else {
-    return a.code === b.code && a.size === b.size && bytes.equals(a.bytes, b.bytes);
-  }
-};
-class Digest {
-  constructor(code, size, digest, bytes) {
-    this.code = code;
-    this.size = size;
-    this.digest = digest;
-    this.bytes = bytes;
-  }
-}
-
-exports.Digest = Digest;
-exports.create = create;
-exports.decode = decode;
-exports.equals = equals;
-
-},{"../bytes.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bytes.js","../varint.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/varint.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/identity.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var bytes = require('../bytes.js');
-var digest$1 = require('./digest.js');
-
-const code = 0;
-const name = 'identity';
-const encode = bytes.coerce;
-const digest = input => digest$1.create(code, encode(input));
-const identity = {
-  code,
-  name,
-  encode,
-  digest
-};
-
-exports.identity = identity;
-
-},{"../bytes.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bytes.js","./digest.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/digest.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/vendor/base-x.js":[function(require,module,exports) {
-'use strict';
-
-function base(ALPHABET, name) {
-  if (ALPHABET.length >= 255) {
-    throw new TypeError('Alphabet too long');
-  }
-  var BASE_MAP = new Uint8Array(256);
-  for (var j = 0; j < BASE_MAP.length; j++) {
-    BASE_MAP[j] = 255;
-  }
-  for (var i = 0; i < ALPHABET.length; i++) {
-    var x = ALPHABET.charAt(i);
-    var xc = x.charCodeAt(0);
-    if (BASE_MAP[xc] !== 255) {
-      throw new TypeError(x + ' is ambiguous');
-    }
-    BASE_MAP[xc] = i;
-  }
-  var BASE = ALPHABET.length;
-  var LEADER = ALPHABET.charAt(0);
-  var FACTOR = Math.log(BASE) / Math.log(256);
-  var iFACTOR = Math.log(256) / Math.log(BASE);
-  function encode(source) {
-    if (source instanceof Uint8Array);
-    else if (ArrayBuffer.isView(source)) {
-      source = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
-    } else if (Array.isArray(source)) {
-      source = Uint8Array.from(source);
-    }
-    if (!(source instanceof Uint8Array)) {
-      throw new TypeError('Expected Uint8Array');
-    }
-    if (source.length === 0) {
-      return '';
-    }
-    var zeroes = 0;
-    var length = 0;
-    var pbegin = 0;
-    var pend = source.length;
-    while (pbegin !== pend && source[pbegin] === 0) {
-      pbegin++;
-      zeroes++;
-    }
-    var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
-    var b58 = new Uint8Array(size);
-    while (pbegin !== pend) {
-      var carry = source[pbegin];
-      var i = 0;
-      for (var it1 = size - 1; (carry !== 0 || i < length) && it1 !== -1; it1--, i++) {
-        carry += 256 * b58[it1] >>> 0;
-        b58[it1] = carry % BASE >>> 0;
-        carry = carry / BASE >>> 0;
-      }
-      if (carry !== 0) {
-        throw new Error('Non-zero carry');
-      }
-      length = i;
-      pbegin++;
-    }
-    var it2 = size - length;
-    while (it2 !== size && b58[it2] === 0) {
-      it2++;
-    }
-    var str = LEADER.repeat(zeroes);
-    for (; it2 < size; ++it2) {
-      str += ALPHABET.charAt(b58[it2]);
-    }
-    return str;
-  }
-  function decodeUnsafe(source) {
-    if (typeof source !== 'string') {
-      throw new TypeError('Expected String');
-    }
-    if (source.length === 0) {
-      return new Uint8Array();
-    }
-    var psz = 0;
-    if (source[psz] === ' ') {
-      return;
-    }
-    var zeroes = 0;
-    var length = 0;
-    while (source[psz] === LEADER) {
-      zeroes++;
-      psz++;
-    }
-    var size = (source.length - psz) * FACTOR + 1 >>> 0;
-    var b256 = new Uint8Array(size);
-    while (source[psz]) {
-      var carry = BASE_MAP[source.charCodeAt(psz)];
-      if (carry === 255) {
-        return;
-      }
-      var i = 0;
-      for (var it3 = size - 1; (carry !== 0 || i < length) && it3 !== -1; it3--, i++) {
-        carry += BASE * b256[it3] >>> 0;
-        b256[it3] = carry % 256 >>> 0;
-        carry = carry / 256 >>> 0;
-      }
-      if (carry !== 0) {
-        throw new Error('Non-zero carry');
-      }
-      length = i;
-      psz++;
-    }
-    if (source[psz] === ' ') {
-      return;
-    }
-    var it4 = size - length;
-    while (it4 !== size && b256[it4] === 0) {
-      it4++;
-    }
-    var vch = new Uint8Array(zeroes + (size - it4));
-    var j = zeroes;
-    while (it4 !== size) {
-      vch[j++] = b256[it4++];
-    }
-    return vch;
-  }
-  function decode(string) {
-    var buffer = decodeUnsafe(string);
-    if (buffer) {
-      return buffer;
-    }
-    throw new Error(`Non-${ name } character`);
-  }
-  return {
-    encode: encode,
-    decodeUnsafe: decodeUnsafe,
-    decode: decode
-  };
-}
-var src = base;
-var _brrp__multiformats_scope_baseX = src;
-
-module.exports = _brrp__multiformats_scope_baseX;
-
-},{}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var baseX$1 = require('../../vendor/base-x.js');
-var bytes = require('../bytes.js');
-
-class Encoder {
-  constructor(name, prefix, baseEncode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseEncode = baseEncode;
-  }
-  encode(bytes) {
-    if (bytes instanceof Uint8Array) {
-      return `${ this.prefix }${ this.baseEncode(bytes) }`;
-    } else {
-      throw Error('Unknown type, must be binary type');
-    }
-  }
-}
-class Decoder {
-  constructor(name, prefix, baseDecode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseDecode = baseDecode;
-  }
-  decode(text) {
-    if (typeof text === 'string') {
-      switch (text[0]) {
-      case this.prefix: {
-          return this.baseDecode(text.slice(1));
-        }
-      default: {
-          throw Error(`Unable to decode multibase string ${ JSON.stringify(text) }, ${ this.name } decoder only supports inputs prefixed with ${ this.prefix }`);
-        }
-      }
-    } else {
-      throw Error('Can only multibase decode strings');
-    }
-  }
-  or(decoder) {
-    return or(this, decoder);
-  }
-}
-class ComposedDecoder {
-  constructor(decoders) {
-    this.decoders = decoders;
-  }
-  or(decoder) {
-    return or(this, decoder);
-  }
-  decode(input) {
-    const prefix = input[0];
-    const decoder = this.decoders[prefix];
-    if (decoder) {
-      return decoder.decode(input);
-    } else {
-      throw RangeError(`Unable to decode multibase string ${ JSON.stringify(input) }, only inputs prefixed with ${ Object.keys(this.decoders) } are supported`);
-    }
-  }
-}
-const or = (left, right) => new ComposedDecoder({
-  ...left.decoders || { [left.prefix]: left },
-  ...right.decoders || { [right.prefix]: right }
-});
-class Codec {
-  constructor(name, prefix, baseEncode, baseDecode) {
-    this.name = name;
-    this.prefix = prefix;
-    this.baseEncode = baseEncode;
-    this.baseDecode = baseDecode;
-    this.encoder = new Encoder(name, prefix, baseEncode);
-    this.decoder = new Decoder(name, prefix, baseDecode);
-  }
-  encode(input) {
-    return this.encoder.encode(input);
-  }
-  decode(input) {
-    return this.decoder.decode(input);
-  }
-}
-const from = ({name, prefix, encode, decode}) => new Codec(name, prefix, encode, decode);
-const baseX = ({prefix, name, alphabet}) => {
-  const {encode, decode} = baseX$1(alphabet, name);
-  return from({
-    prefix,
-    name,
-    encode,
-    decode: text => bytes.coerce(decode(text))
-  });
-};
-const decode = (string, alphabet, bitsPerChar, name) => {
-  const codes = {};
-  for (let i = 0; i < alphabet.length; ++i) {
-    codes[alphabet[i]] = i;
-  }
-  let end = string.length;
-  while (string[end - 1] === '=') {
-    --end;
-  }
-  const out = new Uint8Array(end * bitsPerChar / 8 | 0);
-  let bits = 0;
-  let buffer = 0;
-  let written = 0;
-  for (let i = 0; i < end; ++i) {
-    const value = codes[string[i]];
-    if (value === undefined) {
-      throw new SyntaxError(`Non-${ name } character`);
-    }
-    buffer = buffer << bitsPerChar | value;
-    bits += bitsPerChar;
-    if (bits >= 8) {
-      bits -= 8;
-      out[written++] = 255 & buffer >> bits;
-    }
-  }
-  if (bits >= bitsPerChar || 255 & buffer << 8 - bits) {
-    throw new SyntaxError('Unexpected end of data');
-  }
-  return out;
-};
-const encode = (data, alphabet, bitsPerChar) => {
-  const pad = alphabet[alphabet.length - 1] === '=';
-  const mask = (1 << bitsPerChar) - 1;
-  let out = '';
-  let bits = 0;
-  let buffer = 0;
-  for (let i = 0; i < data.length; ++i) {
-    buffer = buffer << 8 | data[i];
-    bits += 8;
-    while (bits > bitsPerChar) {
-      bits -= bitsPerChar;
-      out += alphabet[mask & buffer >> bits];
-    }
-  }
-  if (bits) {
-    out += alphabet[mask & buffer << bitsPerChar - bits];
-  }
-  if (pad) {
-    while (out.length * bitsPerChar & 7) {
-      out += '=';
-    }
-  }
-  return out;
-};
-const rfc4648 = ({name, prefix, bitsPerChar, alphabet}) => {
-  return from({
-    prefix,
-    name,
-    encode(input) {
-      return encode(input, alphabet, bitsPerChar);
-    },
-    decode(input) {
-      return decode(input, alphabet, bitsPerChar, name);
-    }
-  });
-};
-
-exports.Codec = Codec;
-exports.baseX = baseX;
-exports.from = from;
-exports.or = or;
-exports.rfc4648 = rfc4648;
-
-},{"../../vendor/base-x.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/vendor/base-x.js","../bytes.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/identity.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-var bytes = require('../bytes.js');
-
-const identity = base.from({
-  prefix: '\0',
-  name: 'identity',
-  encode: buf => bytes.toString(buf),
-  decode: str => bytes.fromString(str)
-});
-
-exports.identity = identity;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js","../bytes.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base2.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base2 = base.rfc4648({
-  prefix: '0',
-  name: 'base2',
-  alphabet: '01',
-  bitsPerChar: 1
-});
-
-exports.base2 = base2;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base8.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base8 = base.rfc4648({
-  prefix: '7',
-  name: 'base8',
-  alphabet: '01234567',
-  bitsPerChar: 3
-});
-
-exports.base8 = base8;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base10.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base10 = base.baseX({
-  prefix: '9',
-  name: 'base10',
-  alphabet: '0123456789'
-});
-
-exports.base10 = base10;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base16.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base16 = base.rfc4648({
-  prefix: 'f',
-  name: 'base16',
-  alphabet: '0123456789abcdef',
-  bitsPerChar: 4
-});
-const base16upper = base.rfc4648({
-  prefix: 'F',
-  name: 'base16upper',
-  alphabet: '0123456789ABCDEF',
-  bitsPerChar: 4
-});
-
-exports.base16 = base16;
-exports.base16upper = base16upper;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base32.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base32 = base.rfc4648({
-  prefix: 'b',
-  name: 'base32',
-  alphabet: 'abcdefghijklmnopqrstuvwxyz234567',
-  bitsPerChar: 5
-});
-const base32upper = base.rfc4648({
-  prefix: 'B',
-  name: 'base32upper',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
-  bitsPerChar: 5
-});
-const base32pad = base.rfc4648({
-  prefix: 'c',
-  name: 'base32pad',
-  alphabet: 'abcdefghijklmnopqrstuvwxyz234567=',
-  bitsPerChar: 5
-});
-const base32padupper = base.rfc4648({
-  prefix: 'C',
-  name: 'base32padupper',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=',
-  bitsPerChar: 5
-});
-const base32hex = base.rfc4648({
-  prefix: 'v',
-  name: 'base32hex',
-  alphabet: '0123456789abcdefghijklmnopqrstuv',
-  bitsPerChar: 5
-});
-const base32hexupper = base.rfc4648({
-  prefix: 'V',
-  name: 'base32hexupper',
-  alphabet: '0123456789ABCDEFGHIJKLMNOPQRSTUV',
-  bitsPerChar: 5
-});
-const base32hexpad = base.rfc4648({
-  prefix: 't',
-  name: 'base32hexpad',
-  alphabet: '0123456789abcdefghijklmnopqrstuv=',
-  bitsPerChar: 5
-});
-const base32hexpadupper = base.rfc4648({
-  prefix: 'T',
-  name: 'base32hexpadupper',
-  alphabet: '0123456789ABCDEFGHIJKLMNOPQRSTUV=',
-  bitsPerChar: 5
-});
-const base32z = base.rfc4648({
-  prefix: 'h',
-  name: 'base32z',
-  alphabet: 'ybndrfg8ejkmcpqxot1uwisza345h769',
-  bitsPerChar: 5
-});
-
-exports.base32 = base32;
-exports.base32hex = base32hex;
-exports.base32hexpad = base32hexpad;
-exports.base32hexpadupper = base32hexpadupper;
-exports.base32hexupper = base32hexupper;
-exports.base32pad = base32pad;
-exports.base32padupper = base32padupper;
-exports.base32upper = base32upper;
-exports.base32z = base32z;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base36.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base36 = base.baseX({
-  prefix: 'k',
-  name: 'base36',
-  alphabet: '0123456789abcdefghijklmnopqrstuvwxyz'
-});
-const base36upper = base.baseX({
-  prefix: 'K',
-  name: 'base36upper',
-  alphabet: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-});
-
-exports.base36 = base36;
-exports.base36upper = base36upper;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base58.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base58btc = base.baseX({
-  name: 'base58btc',
-  prefix: 'z',
-  alphabet: '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-});
-const base58flickr = base.baseX({
-  name: 'base58flickr',
-  prefix: 'Z',
-  alphabet: '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
-});
-
-exports.base58btc = base58btc;
-exports.base58flickr = base58flickr;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base64.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var base = require('./base.js');
-
-const base64 = base.rfc4648({
-  prefix: 'm',
-  name: 'base64',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',
-  bitsPerChar: 6
-});
-const base64pad = base.rfc4648({
-  prefix: 'M',
-  name: 'base64pad',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
-  bitsPerChar: 6
-});
-const base64url = base.rfc4648({
-  prefix: 'u',
-  name: 'base64url',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',
-  bitsPerChar: 6
-});
-const base64urlpad = base.rfc4648({
-  prefix: 'U',
-  name: 'base64urlpad',
-  alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=',
-  bitsPerChar: 6
-});
-
-exports.base64 = base64;
-exports.base64pad = base64pad;
-exports.base64url = base64url;
-exports.base64urlpad = base64urlpad;
-
-},{"./base.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/hasher.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var digest = require('./digest.js');
-
-const from = ({name, code, encode}) => new Hasher(name, code, encode);
-class Hasher {
-  constructor(name, code, encode) {
-    this.name = name;
-    this.code = code;
-    this.encode = encode;
-  }
-  digest(input) {
-    if (input instanceof Uint8Array) {
-      const result = this.encode(input);
-      return result instanceof Uint8Array ? digest.create(this.code, result) : result.then(digest$1 => digest.create(this.code, digest$1));
-    } else {
-      throw Error('Unknown type, must be binary type');
-    }
-  }
-}
-
-exports.Hasher = Hasher;
-exports.from = from;
-
-},{"./digest.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/digest.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/sha2-browser.js":[function(require,module,exports) {
+},{"./signing":"../node_modules/dag-jose/lib/signing.js","./encryption":"../node_modules/dag-jose/lib/encryption.js","@ipld/dag-cbor":"../node_modules/@ipld/dag-cbor/cjs/index.js"}],"../node_modules/multiformats/cjs/src/hashes/identity.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var hasher = require('./hasher.js');
-
-const sha = name => async data => new Uint8Array(await crypto.subtle.digest(name, data));
-const sha256 = hasher.from({
-  name: 'sha2-256',
-  code: 18,
-  encode: sha('SHA-256')
-});
-const sha512 = hasher.from({
-  name: 'sha2-512',
-  code: 19,
-  encode: sha('SHA-512')
-});
-
-exports.sha256 = sha256;
-exports.sha512 = sha512;
-
-},{"./hasher.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/hasher.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/codecs/raw.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
 var bytes = require('../bytes.js');
 
-const name = 'raw';
-const code = 85;
-const encode = node => bytes.coerce(node);
-const decode = data => bytes.coerce(data);
+const identity = hasher.from({
+  name: 'identity',
+  code: 0,
+  encode: input => bytes.coerce(input)
+});
 
-exports.code = code;
-exports.decode = decode;
-exports.encode = encode;
-exports.name = name;
+exports.identity = identity;
 
-},{"../bytes.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/codecs/json.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-const textEncoder = new TextEncoder();
-const textDecoder = new TextDecoder();
-const name = 'json';
-const code = 512;
-const encode = node => textEncoder.encode(JSON.stringify(node));
-const decode = data => JSON.parse(textDecoder.decode(data));
-
-exports.code = code;
-exports.decode = decode;
-exports.encode = encode;
-exports.name = name;
-
-},{}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var varint = require('./varint.js');
-var digest = require('./hashes/digest.js');
-var base58 = require('./bases/base58.js');
-var base32 = require('./bases/base32.js');
-var bytes = require('./bytes.js');
-
-class CID {
-  constructor(version, code, multihash, bytes) {
-    this.code = code;
-    this.version = version;
-    this.multihash = multihash;
-    this.bytes = bytes;
-    this.byteOffset = bytes.byteOffset;
-    this.byteLength = bytes.byteLength;
-    this.asCID = this;
-    this._baseCache = new Map();
-    Object.defineProperties(this, {
-      byteOffset: hidden,
-      byteLength: hidden,
-      code: readonly,
-      version: readonly,
-      multihash: readonly,
-      bytes: readonly,
-      _baseCache: hidden,
-      asCID: hidden
-    });
-  }
-  toV0() {
-    switch (this.version) {
-    case 0: {
-        return this;
-      }
-    default: {
-        const {code, multihash} = this;
-        if (code !== DAG_PB_CODE) {
-          throw new Error('Cannot convert a non dag-pb CID to CIDv0');
-        }
-        if (multihash.code !== SHA_256_CODE) {
-          throw new Error('Cannot convert non sha2-256 multihash CID to CIDv0');
-        }
-        return CID.createV0(multihash);
-      }
-    }
-  }
-  toV1() {
-    switch (this.version) {
-    case 0: {
-        const {code, digest: digest$1} = this.multihash;
-        const multihash = digest.create(code, digest$1);
-        return CID.createV1(this.code, multihash);
-      }
-    case 1: {
-        return this;
-      }
-    default: {
-        throw Error(`Can not convert CID version ${ this.version } to version 0. This is a bug please report`);
-      }
-    }
-  }
-  equals(other) {
-    return other && this.code === other.code && this.version === other.version && digest.equals(this.multihash, other.multihash);
-  }
-  toString(base) {
-    const {bytes, version, _baseCache} = this;
-    switch (version) {
-    case 0:
-      return toStringV0(bytes, _baseCache, base || base58.base58btc.encoder);
-    default:
-      return toStringV1(bytes, _baseCache, base || base32.base32.encoder);
-    }
-  }
-  toJSON() {
-    return {
-      code: this.code,
-      version: this.version,
-      hash: this.multihash.bytes
-    };
-  }
-  get [Symbol.toStringTag]() {
-    return 'CID';
-  }
-  [Symbol.for('nodejs.util.inspect.custom')]() {
-    return 'CID(' + this.toString() + ')';
-  }
-  static isCID(value) {
-    deprecate(/^0\.0/, IS_CID_DEPRECATION);
-    return !!(value && (value[cidSymbol] || value.asCID === value));
-  }
-  get toBaseEncodedString() {
-    throw new Error('Deprecated, use .toString()');
-  }
-  get codec() {
-    throw new Error('"codec" property is deprecated, use integer "code" property instead');
-  }
-  get buffer() {
-    throw new Error('Deprecated .buffer property, use .bytes to get Uint8Array instead');
-  }
-  get multibaseName() {
-    throw new Error('"multibaseName" property is deprecated');
-  }
-  get prefix() {
-    throw new Error('"prefix" property is deprecated');
-  }
-  static asCID(value) {
-    if (value instanceof CID) {
-      return value;
-    } else if (value != null && value.asCID === value) {
-      const {version, code, multihash, bytes} = value;
-      return new CID(version, code, multihash, bytes || encodeCID(version, code, multihash.bytes));
-    } else if (value != null && value[cidSymbol] === true) {
-      const {version, multihash, code} = value;
-      const digest$1 = digest.decode(multihash);
-      return CID.create(version, code, digest$1);
-    } else {
-      return null;
-    }
-  }
-  static create(version, code, digest) {
-    if (typeof code !== 'number') {
-      throw new Error('String codecs are no longer supported');
-    }
-    switch (version) {
-    case 0: {
-        if (code !== DAG_PB_CODE) {
-          throw new Error(`Version 0 CID must use dag-pb (code: ${ DAG_PB_CODE }) block encoding`);
-        } else {
-          return new CID(version, code, digest, digest.bytes);
-        }
-      }
-    case 1: {
-        const bytes = encodeCID(version, code, digest.bytes);
-        return new CID(version, code, digest, bytes);
-      }
-    default: {
-        throw new Error('Invalid version');
-      }
-    }
-  }
-  static createV0(digest) {
-    return CID.create(0, DAG_PB_CODE, digest);
-  }
-  static createV1(code, digest) {
-    return CID.create(1, code, digest);
-  }
-  static decode(bytes) {
-    const [cid, remainder] = CID.decodeFirst(bytes);
-    if (remainder.length) {
-      throw new Error('Incorrect length');
-    }
-    return cid;
-  }
-  static decodeFirst(bytes$1) {
-    const specs = CID.inspectBytes(bytes$1);
-    const prefixSize = specs.size - specs.multihashSize;
-    const multihashBytes = bytes.coerce(bytes$1.subarray(prefixSize, prefixSize + specs.multihashSize));
-    if (multihashBytes.byteLength !== specs.multihashSize) {
-      throw new Error('Incorrect length');
-    }
-    const digestBytes = multihashBytes.subarray(specs.multihashSize - specs.digestSize);
-    const digest$1 = new digest.Digest(specs.multihashCode, specs.digestSize, digestBytes, multihashBytes);
-    const cid = specs.version === 0 ? CID.createV0(digest$1) : CID.createV1(specs.codec, digest$1);
-    return [
-      cid,
-      bytes$1.subarray(specs.size)
-    ];
-  }
-  static inspectBytes(initialBytes) {
-    let offset = 0;
-    const next = () => {
-      const [i, length] = varint.decode(initialBytes.subarray(offset));
-      offset += length;
-      return i;
-    };
-    let version = next();
-    let codec = DAG_PB_CODE;
-    if (version === 18) {
-      version = 0;
-      offset = 0;
-    } else if (version === 1) {
-      codec = next();
-    }
-    if (version !== 0 && version !== 1) {
-      throw new RangeError(`Invalid CID version ${ version }`);
-    }
-    const prefixSize = offset;
-    const multihashCode = next();
-    const digestSize = next();
-    const size = offset + digestSize;
-    const multihashSize = size - prefixSize;
-    return {
-      version,
-      codec,
-      multihashCode,
-      digestSize,
-      multihashSize,
-      size
-    };
-  }
-  static parse(source, base) {
-    const [prefix, bytes] = parseCIDtoBytes(source, base);
-    const cid = CID.decode(bytes);
-    cid._baseCache.set(prefix, source);
-    return cid;
-  }
-}
-const parseCIDtoBytes = (source, base) => {
-  switch (source[0]) {
-  case 'Q': {
-      const decoder = base || base58.base58btc;
-      return [
-        base58.base58btc.prefix,
-        decoder.decode(`${ base58.base58btc.prefix }${ source }`)
-      ];
-    }
-  case base58.base58btc.prefix: {
-      const decoder = base || base58.base58btc;
-      return [
-        base58.base58btc.prefix,
-        decoder.decode(source)
-      ];
-    }
-  case base32.base32.prefix: {
-      const decoder = base || base32.base32;
-      return [
-        base32.base32.prefix,
-        decoder.decode(source)
-      ];
-    }
-  default: {
-      if (base == null) {
-        throw Error('To parse non base32 or base58btc encoded CID multibase decoder must be provided');
-      }
-      return [
-        source[0],
-        base.decode(source)
-      ];
-    }
-  }
-};
-const toStringV0 = (bytes, cache, base) => {
-  const {prefix} = base;
-  if (prefix !== base58.base58btc.prefix) {
-    throw Error(`Cannot string encode V0 in ${ base.name } encoding`);
-  }
-  const cid = cache.get(prefix);
-  if (cid == null) {
-    const cid = base.encode(bytes).slice(1);
-    cache.set(prefix, cid);
-    return cid;
-  } else {
-    return cid;
-  }
-};
-const toStringV1 = (bytes, cache, base) => {
-  const {prefix} = base;
-  const cid = cache.get(prefix);
-  if (cid == null) {
-    const cid = base.encode(bytes);
-    cache.set(prefix, cid);
-    return cid;
-  } else {
-    return cid;
-  }
-};
-const DAG_PB_CODE = 112;
-const SHA_256_CODE = 18;
-const encodeCID = (version, code, multihash) => {
-  const codeOffset = varint.encodingLength(version);
-  const hashOffset = codeOffset + varint.encodingLength(code);
-  const bytes = new Uint8Array(hashOffset + multihash.byteLength);
-  varint.encodeTo(version, bytes, 0);
-  varint.encodeTo(code, bytes, codeOffset);
-  bytes.set(multihash, hashOffset);
-  return bytes;
-};
-const cidSymbol = Symbol.for('@ipld/js-cid/CID');
-const readonly = {
-  writable: false,
-  configurable: false,
-  enumerable: true
-};
-const hidden = {
-  writable: false,
-  enumerable: false,
-  configurable: false
-};
-const version = '0.0.0-dev';
-const deprecate = (range, message) => {
-  if (range.test(version)) {
-    console.warn(message);
-  } else {
-    throw new Error(message);
-  }
-};
-const IS_CID_DEPRECATION = `CID.isCID(v) is deprecated and will be removed in the next major release.
-Following code pattern:
-
-if (CID.isCID(value)) {
-  doSomethingWithCID(value)
-}
-
-Is replaced with:
-
-const cid = CID.asCID(value)
-if (cid) {
-  // Make sure to use cid instead of value
-  doSomethingWithCID(cid)
-}
-`;
-
-exports.CID = CID;
-
-},{"./varint.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/varint.js","./hashes/digest.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/digest.js","./bases/base58.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base58.js","./bases/base32.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base32.js","./bytes.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/index.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var cid = require('./cid.js');
-var varint = require('./varint.js');
-var bytes = require('./bytes.js');
-var hasher = require('./hashes/hasher.js');
-var digest = require('./hashes/digest.js');
-
-
-
-exports.CID = cid.CID;
-exports.varint = varint;
-exports.bytes = bytes;
-exports.hasher = hasher;
-exports.digest = digest;
-
-},{"./cid.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","./varint.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/varint.js","./bytes.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bytes.js","./hashes/hasher.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/hasher.js","./hashes/digest.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/digest.js"}],"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/basics.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var identity = require('./bases/identity.js');
-var base2 = require('./bases/base2.js');
-var base8 = require('./bases/base8.js');
-var base10 = require('./bases/base10.js');
-var base16 = require('./bases/base16.js');
-var base32 = require('./bases/base32.js');
-var base36 = require('./bases/base36.js');
-var base58 = require('./bases/base58.js');
-var base64 = require('./bases/base64.js');
-var sha2 = require('./hashes/sha2.js');
-var identity$1 = require('./hashes/identity.js');
-var raw = require('./codecs/raw.js');
-var json = require('./codecs/json.js');
-require('./index.js');
-var cid = require('./cid.js');
-var hasher = require('./hashes/hasher.js');
-var digest = require('./hashes/digest.js');
-var varint = require('./varint.js');
-var bytes = require('./bytes.js');
-
-const bases = {
-  ...identity,
-  ...base2,
-  ...base8,
-  ...base10,
-  ...base16,
-  ...base32,
-  ...base36,
-  ...base58,
-  ...base64
-};
-const hashes = {
-  ...sha2,
-  ...identity$1
-};
-const codecs = {
-  raw,
-  json
-};
-
-exports.CID = cid.CID;
-exports.hasher = hasher;
-exports.digest = digest;
-exports.varint = varint;
-exports.bytes = bytes;
-exports.bases = bases;
-exports.codecs = codecs;
-exports.hashes = hashes;
-
-},{"./bases/identity.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/identity.js","./bases/base2.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base2.js","./bases/base8.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base8.js","./bases/base10.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base10.js","./bases/base16.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base16.js","./bases/base32.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base32.js","./bases/base36.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base36.js","./bases/base58.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base58.js","./bases/base64.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base64.js","./hashes/sha2.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/sha2-browser.js","./hashes/identity.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/identity.js","./codecs/raw.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/codecs/raw.js","./codecs/json.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/codecs/json.js","./index.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/index.js","./cid.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","./hashes/hasher.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/hasher.js","./hashes/digest.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/digest.js","./varint.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/varint.js","./bytes.js":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ip-regex/index.js":[function(require,module,exports) {
-'use strict';
-
-var word = '[a-fA-F\\d:]';
-
-var b = function b(options) {
-  return options && options.includeBoundaries ? "(?:(?<=\\s|^)(?=".concat(word, ")|(?<=").concat(word, ")(?=\\s|$))") : '';
-};
-
-var v4 = '(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}';
-var v6seg = '[a-fA-F\\d]{1,4}';
-var v6 = "\n(?:\n(?:".concat(v6seg, ":){7}(?:").concat(v6seg, "|:)|                                    // 1:2:3:4:5:6:7::  1:2:3:4:5:6:7:8\n(?:").concat(v6seg, ":){6}(?:").concat(v4, "|:").concat(v6seg, "|:)|                             // 1:2:3:4:5:6::    1:2:3:4:5:6::8   1:2:3:4:5:6::8  1:2:3:4:5:6::1.2.3.4\n(?:").concat(v6seg, ":){5}(?::").concat(v4, "|(?::").concat(v6seg, "){1,2}|:)|                   // 1:2:3:4:5::      1:2:3:4:5::7:8   1:2:3:4:5::8    1:2:3:4:5::7:1.2.3.4\n(?:").concat(v6seg, ":){4}(?:(?::").concat(v6seg, "){0,1}:").concat(v4, "|(?::").concat(v6seg, "){1,3}|:)| // 1:2:3:4::        1:2:3:4::6:7:8   1:2:3:4::8      1:2:3:4::6:7:1.2.3.4\n(?:").concat(v6seg, ":){3}(?:(?::").concat(v6seg, "){0,2}:").concat(v4, "|(?::").concat(v6seg, "){1,4}|:)| // 1:2:3::          1:2:3::5:6:7:8   1:2:3::8        1:2:3::5:6:7:1.2.3.4\n(?:").concat(v6seg, ":){2}(?:(?::").concat(v6seg, "){0,3}:").concat(v4, "|(?::").concat(v6seg, "){1,5}|:)| // 1:2::            1:2::4:5:6:7:8   1:2::8          1:2::4:5:6:7:1.2.3.4\n(?:").concat(v6seg, ":){1}(?:(?::").concat(v6seg, "){0,4}:").concat(v4, "|(?::").concat(v6seg, "){1,6}|:)| // 1::              1::3:4:5:6:7:8   1::8            1::3:4:5:6:7:1.2.3.4\n(?::(?:(?::").concat(v6seg, "){0,5}:").concat(v4, "|(?::").concat(v6seg, "){1,7}|:))             // ::2:3:4:5:6:7:8  ::2:3:4:5:6:7:8  ::8             ::1.2.3.4\n)(?:%[0-9a-zA-Z]{1,})?                                             // %eth0            %1\n").replace(/\s*\/\/.*$/gm, '').replace(/\n/g, '').trim(); // Pre-compile only the exact regexes because adding a global flag make regexes stateful
-
-var v46Exact = new RegExp("(?:^".concat(v4, "$)|(?:^").concat(v6, "$)"));
-var v4exact = new RegExp("^".concat(v4, "$"));
-var v6exact = new RegExp("^".concat(v6, "$"));
-
-var ip = function ip(options) {
-  return options && options.exact ? v46Exact : new RegExp("(?:".concat(b(options)).concat(v4).concat(b(options), ")|(?:").concat(b(options)).concat(v6).concat(b(options), ")"), 'g');
-};
-
-ip.v4 = function (options) {
-  return options && options.exact ? v4exact : new RegExp("".concat(b(options)).concat(v4).concat(b(options)), 'g');
-};
-
-ip.v6 = function (options) {
-  return options && options.exact ? v6exact : new RegExp("".concat(b(options)).concat(v6).concat(b(options)), 'g');
-};
-
-module.exports = ip;
-},{}],"../node_modules/is-ip/index.js":[function(require,module,exports) {
-'use strict';
-
-var ipRegex = require('ip-regex');
-
-var isIp = function isIp(string) {
-  return ipRegex({
-    exact: true
-  }).test(string);
-};
-
-isIp.v4 = function (string) {
-  return ipRegex.v4({
-    exact: true
-  }).test(string);
-};
-
-isIp.v6 = function (string) {
-  return ipRegex.v6({
-    exact: true
-  }).test(string);
-};
-
-isIp.version = function (string) {
-  return isIp(string) ? isIp.v4(string) ? 4 : 6 : undefined;
-};
-
-module.exports = isIp;
-},{"ip-regex":"../node_modules/ip-regex/index.js"}],"../node_modules/multiformats/cjs/src/bases/identity.js":[function(require,module,exports) {
+},{"./hasher.js":"../node_modules/multiformats/cjs/src/hashes/hasher.js","../bytes.js":"../node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/multiformats/cjs/src/bases/identity.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -36493,23 +32215,7 @@ const sha512 = hasher.from({
 exports.sha256 = sha256;
 exports.sha512 = sha512;
 
-},{"./hasher.js":"../node_modules/multiformats/cjs/src/hashes/hasher.js"}],"../node_modules/multiformats/cjs/src/hashes/identity.js":[function(require,module,exports) {
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var hasher = require('./hasher.js');
-var bytes = require('../bytes.js');
-
-const identity = hasher.from({
-  name: 'identity',
-  code: 0,
-  encode: input => bytes.coerce(input)
-});
-
-exports.identity = identity;
-
-},{"./hasher.js":"../node_modules/multiformats/cjs/src/hashes/hasher.js","../bytes.js":"../node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/multiformats/cjs/src/codecs/raw.js":[function(require,module,exports) {
+},{"./hasher.js":"../node_modules/multiformats/cjs/src/hashes/hasher.js"}],"../node_modules/multiformats/cjs/src/codecs/raw.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -36597,7 +32303,65 @@ exports.bases = bases;
 exports.codecs = codecs;
 exports.hashes = hashes;
 
-},{"./bases/identity.js":"../node_modules/multiformats/cjs/src/bases/identity.js","./bases/base2.js":"../node_modules/multiformats/cjs/src/bases/base2.js","./bases/base8.js":"../node_modules/multiformats/cjs/src/bases/base8.js","./bases/base10.js":"../node_modules/multiformats/cjs/src/bases/base10.js","./bases/base16.js":"../node_modules/multiformats/cjs/src/bases/base16.js","./bases/base32.js":"../node_modules/multiformats/cjs/src/bases/base32.js","./bases/base36.js":"../node_modules/multiformats/cjs/src/bases/base36.js","./bases/base58.js":"../node_modules/multiformats/cjs/src/bases/base58.js","./bases/base64.js":"../node_modules/multiformats/cjs/src/bases/base64.js","./hashes/sha2.js":"../node_modules/multiformats/cjs/src/hashes/sha2-browser.js","./hashes/identity.js":"../node_modules/multiformats/cjs/src/hashes/identity.js","./codecs/raw.js":"../node_modules/multiformats/cjs/src/codecs/raw.js","./codecs/json.js":"../node_modules/multiformats/cjs/src/codecs/json.js","./index.js":"../node_modules/multiformats/cjs/src/index.js","./cid.js":"../node_modules/multiformats/cjs/src/cid.js","./hashes/hasher.js":"../node_modules/multiformats/cjs/src/hashes/hasher.js","./hashes/digest.js":"../node_modules/multiformats/cjs/src/hashes/digest.js","./varint.js":"../node_modules/multiformats/cjs/src/varint.js","./bytes.js":"../node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/uint8arrays/cjs/src/util/bases.js":[function(require,module,exports) {
+},{"./bases/identity.js":"../node_modules/multiformats/cjs/src/bases/identity.js","./bases/base2.js":"../node_modules/multiformats/cjs/src/bases/base2.js","./bases/base8.js":"../node_modules/multiformats/cjs/src/bases/base8.js","./bases/base10.js":"../node_modules/multiformats/cjs/src/bases/base10.js","./bases/base16.js":"../node_modules/multiformats/cjs/src/bases/base16.js","./bases/base32.js":"../node_modules/multiformats/cjs/src/bases/base32.js","./bases/base36.js":"../node_modules/multiformats/cjs/src/bases/base36.js","./bases/base58.js":"../node_modules/multiformats/cjs/src/bases/base58.js","./bases/base64.js":"../node_modules/multiformats/cjs/src/bases/base64.js","./hashes/sha2.js":"../node_modules/multiformats/cjs/src/hashes/sha2-browser.js","./hashes/identity.js":"../node_modules/multiformats/cjs/src/hashes/identity.js","./codecs/raw.js":"../node_modules/multiformats/cjs/src/codecs/raw.js","./codecs/json.js":"../node_modules/multiformats/cjs/src/codecs/json.js","./index.js":"../node_modules/multiformats/cjs/src/index.js","./cid.js":"../node_modules/multiformats/cjs/src/cid.js","./hashes/hasher.js":"../node_modules/multiformats/cjs/src/hashes/hasher.js","./hashes/digest.js":"../node_modules/multiformats/cjs/src/hashes/digest.js","./varint.js":"../node_modules/multiformats/cjs/src/varint.js","./bytes.js":"../node_modules/multiformats/cjs/src/bytes.js"}],"../node_modules/ip-regex/index.js":[function(require,module,exports) {
+'use strict';
+
+var word = '[a-fA-F\\d:]';
+
+var b = function b(options) {
+  return options && options.includeBoundaries ? "(?:(?<=\\s|^)(?=".concat(word, ")|(?<=").concat(word, ")(?=\\s|$))") : '';
+};
+
+var v4 = '(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}';
+var v6seg = '[a-fA-F\\d]{1,4}';
+var v6 = "\n(?:\n(?:".concat(v6seg, ":){7}(?:").concat(v6seg, "|:)|                                    // 1:2:3:4:5:6:7::  1:2:3:4:5:6:7:8\n(?:").concat(v6seg, ":){6}(?:").concat(v4, "|:").concat(v6seg, "|:)|                             // 1:2:3:4:5:6::    1:2:3:4:5:6::8   1:2:3:4:5:6::8  1:2:3:4:5:6::1.2.3.4\n(?:").concat(v6seg, ":){5}(?::").concat(v4, "|(?::").concat(v6seg, "){1,2}|:)|                   // 1:2:3:4:5::      1:2:3:4:5::7:8   1:2:3:4:5::8    1:2:3:4:5::7:1.2.3.4\n(?:").concat(v6seg, ":){4}(?:(?::").concat(v6seg, "){0,1}:").concat(v4, "|(?::").concat(v6seg, "){1,3}|:)| // 1:2:3:4::        1:2:3:4::6:7:8   1:2:3:4::8      1:2:3:4::6:7:1.2.3.4\n(?:").concat(v6seg, ":){3}(?:(?::").concat(v6seg, "){0,2}:").concat(v4, "|(?::").concat(v6seg, "){1,4}|:)| // 1:2:3::          1:2:3::5:6:7:8   1:2:3::8        1:2:3::5:6:7:1.2.3.4\n(?:").concat(v6seg, ":){2}(?:(?::").concat(v6seg, "){0,3}:").concat(v4, "|(?::").concat(v6seg, "){1,5}|:)| // 1:2::            1:2::4:5:6:7:8   1:2::8          1:2::4:5:6:7:1.2.3.4\n(?:").concat(v6seg, ":){1}(?:(?::").concat(v6seg, "){0,4}:").concat(v4, "|(?::").concat(v6seg, "){1,6}|:)| // 1::              1::3:4:5:6:7:8   1::8            1::3:4:5:6:7:1.2.3.4\n(?::(?:(?::").concat(v6seg, "){0,5}:").concat(v4, "|(?::").concat(v6seg, "){1,7}|:))             // ::2:3:4:5:6:7:8  ::2:3:4:5:6:7:8  ::8             ::1.2.3.4\n)(?:%[0-9a-zA-Z]{1,})?                                             // %eth0            %1\n").replace(/\s*\/\/.*$/gm, '').replace(/\n/g, '').trim(); // Pre-compile only the exact regexes because adding a global flag make regexes stateful
+
+var v46Exact = new RegExp("(?:^".concat(v4, "$)|(?:^").concat(v6, "$)"));
+var v4exact = new RegExp("^".concat(v4, "$"));
+var v6exact = new RegExp("^".concat(v6, "$"));
+
+var ip = function ip(options) {
+  return options && options.exact ? v46Exact : new RegExp("(?:".concat(b(options)).concat(v4).concat(b(options), ")|(?:").concat(b(options)).concat(v6).concat(b(options), ")"), 'g');
+};
+
+ip.v4 = function (options) {
+  return options && options.exact ? v4exact : new RegExp("".concat(b(options)).concat(v4).concat(b(options)), 'g');
+};
+
+ip.v6 = function (options) {
+  return options && options.exact ? v6exact : new RegExp("".concat(b(options)).concat(v6).concat(b(options)), 'g');
+};
+
+module.exports = ip;
+},{}],"../node_modules/is-ip/index.js":[function(require,module,exports) {
+'use strict';
+
+var ipRegex = require('ip-regex');
+
+var isIp = function isIp(string) {
+  return ipRegex({
+    exact: true
+  }).test(string);
+};
+
+isIp.v4 = function (string) {
+  return ipRegex.v4({
+    exact: true
+  }).test(string);
+};
+
+isIp.v6 = function (string) {
+  return ipRegex.v6({
+    exact: true
+  }).test(string);
+};
+
+isIp.version = function (string) {
+  return isIp(string) ? isIp.v4(string) ? 4 : 6 : undefined;
+};
+
+module.exports = isIp;
+},{"ip-regex":"../node_modules/ip-regex/index.js"}],"../node_modules/uint8arrays/cjs/src/util/bases.js":[function(require,module,exports) {
 'use strict';
 
 var basics = require('multiformats/basics');
@@ -38294,7 +34058,7 @@ function isElectron() {
 
 module.exports = isElectron;
 
-},{"process":"../node_modules/process/browser.js"}],"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/env.js":[function(require,module,exports) {
+},{"process":"../node_modules/process/browser.js"}],"../node_modules/ipfs-utils/src/env.js":[function(require,module,exports) {
 'use strict'
 const isElectron = require('is-electron')
 
@@ -39008,7 +34772,7 @@ formatters.j = function (v) {
     return '[UnexpectedJSONParseError]: ' + error.message;
   }
 };
-},{"./common":"../node_modules/debug/src/common.js","process":"../node_modules/process/browser.js"}],"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/http/error.js":[function(require,module,exports) {
+},{"./common":"../node_modules/debug/src/common.js","process":"../node_modules/process/browser.js"}],"../node_modules/ipfs-utils/src/http/error.js":[function(require,module,exports) {
 'use strict'
 
 class TimeoutError extends Error {
@@ -39091,7 +34855,7 @@ if (globalThis.fetch && globalThis.Headers && globalThis.Request && globalThis.R
   }
 }
 
-},{"node-fetch":"../node_modules/node-fetch/browser.js"}],"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/fetch.js":[function(require,module,exports) {
+},{"node-fetch":"../node_modules/node-fetch/browser.js"}],"../node_modules/ipfs-utils/src/fetch.js":[function(require,module,exports) {
 'use strict'
 
 const { isElectronMain } = require('./env')
@@ -39103,7 +34867,7 @@ if (isElectronMain) {
   module.exports = require('native-fetch')
 }
 
-},{"./env":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/env.js","electron-fetch":"../node_modules/parcel-bundler/src/builtins/_empty.js","native-fetch":"../node_modules/native-fetch/src/index.js"}],"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/http/fetch.browser.js":[function(require,module,exports) {
+},{"./env":"../node_modules/ipfs-utils/src/env.js","electron-fetch":"../node_modules/parcel-bundler/src/builtins/_empty.js","native-fetch":"../node_modules/native-fetch/src/index.js"}],"../node_modules/ipfs-utils/src/http/fetch.browser.js":[function(require,module,exports) {
 'use strict'
 
 const { TimeoutError, AbortError } = require('./error')
@@ -39247,7 +35011,7 @@ module.exports = {
   Headers
 }
 
-},{"./error":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/http/error.js","../fetch":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/fetch.js"}],"../node_modules/is-plain-obj/index.js":[function(require,module,exports) {
+},{"./error":"../node_modules/ipfs-utils/src/http/error.js","../fetch":"../node_modules/ipfs-utils/src/fetch.js"}],"../node_modules/is-plain-obj/index.js":[function(require,module,exports) {
 'use strict';
 
 module.exports = function (value) {
@@ -39714,7 +35478,7 @@ module.exports = {
   relative: relative,
   defaultBase: defaultBase
 };
-},{"./src/url":"../node_modules/iso-url/src/url-browser.js","./src/relative":"../node_modules/iso-url/src/relative.js"}],"../node_modules/ipfs-http-client/node_modules/any-signal/index.js":[function(require,module,exports) {
+},{"./src/url":"../node_modules/iso-url/src/url-browser.js","./src/relative":"../node_modules/iso-url/src/relative.js"}],"../node_modules/ipfs-utils/node_modules/any-signal/index.js":[function(require,module,exports) {
 /**
  * Takes an array of AbortSignals and returns a single signal.
  * If any signals are aborted, the returned signal will be aborted.
@@ -39748,7 +35512,7 @@ function anySignal (signals) {
 module.exports = anySignal
 module.exports.anySignal = anySignal
 
-},{}],"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/http.js":[function(require,module,exports) {
+},{}],"../node_modules/ipfs-utils/src/http.js":[function(require,module,exports) {
 /* eslint-disable no-undef */
 'use strict'
 
@@ -40108,7 +35872,7 @@ HTTP.options = (resource, options) => new HTTP(options).options(resource, option
 
 module.exports = HTTP
 
-},{"./http/fetch":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/http/fetch.browser.js","./http/error":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/http/error.js","merge-options":"../node_modules/merge-options/index.js","iso-url":"../node_modules/iso-url/index.js","any-signal":"../node_modules/ipfs-http-client/node_modules/any-signal/index.js"}],"../node_modules/multiaddr-to-uri/index.js":[function(require,module,exports) {
+},{"./http/fetch":"../node_modules/ipfs-utils/src/http/fetch.browser.js","./http/error":"../node_modules/ipfs-utils/src/http/error.js","merge-options":"../node_modules/merge-options/index.js","iso-url":"../node_modules/iso-url/index.js","any-signal":"../node_modules/ipfs-utils/node_modules/any-signal/index.js"}],"../node_modules/multiaddr-to-uri/index.js":[function(require,module,exports) {
 const { Multiaddr } = require('multiaddr')
 
 const reduceValue = (_, v) => v
@@ -40507,7 +36271,7 @@ var HTTPError = HTTP__default["default"].HTTPError;
 exports.Client = Client;
 exports.HTTPError = HTTPError;
 exports.errorHandler = errorHandler;
-},{"multiaddr":"../node_modules/multiaddr/src/index.js","ipfs-utils/src/env.js":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/env.js","parse-duration":"../node_modules/parse-duration/index.mjs","debug":"../node_modules/debug/src/browser.js","ipfs-utils/src/http.js":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/http.js","merge-options":"../node_modules/merge-options/index.js","ipfs-core-utils/to-url-string":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/to-url-string.js","ipfs-core-utils/agent":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/agent.browser.js"}],"../node_modules/ipfs-http-client/cjs/src/lib/configure.js":[function(require,module,exports) {
+},{"multiaddr":"../node_modules/multiaddr/src/index.js","ipfs-utils/src/env.js":"../node_modules/ipfs-utils/src/env.js","parse-duration":"../node_modules/parse-duration/index.mjs","debug":"../node_modules/debug/src/browser.js","ipfs-utils/src/http.js":"../node_modules/ipfs-utils/src/http.js","merge-options":"../node_modules/merge-options/index.js","ipfs-core-utils/to-url-string":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/to-url-string.js","ipfs-core-utils/agent":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/agent.browser.js"}],"../node_modules/ipfs-http-client/cjs/src/lib/configure.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -40741,7 +36505,7 @@ var createWantlist = configure.configure(function (api) {
   return wantlist;
 });
 exports.createWantlist = createWantlist;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/bitswap/wantlist-for-peer.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/bitswap/wantlist-for-peer.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -40811,7 +36575,7 @@ var createWantlistForPeer = configure.configure(function (api) {
   return wantlistForPeer;
 });
 exports.createWantlistForPeer = createWantlistForPeer;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/bitswap/stat.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/bitswap/stat.js":[function(require,module,exports) {
 'use strict';
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -40890,7 +36654,7 @@ function toCoreInterface(res) {
 }
 
 exports.createStat = createStat;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/bitswap/unwant.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/bitswap/unwant.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -44872,7 +40636,41 @@ async function multipartRequest(source, abortController, headers = {}) {
 
 exports.multipartRequest = multipartRequest;
 
-},{"./files/normalise-input-multiple.browser.js":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/files/normalise-input-multiple.browser.js","./mode-to-string.js":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/mode-to-string.js"}],"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js":[function(require,module,exports) {
+},{"./files/normalise-input-multiple.browser.js":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/files/normalise-input-multiple.browser.js","./mode-to-string.js":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/mode-to-string.js"}],"../node_modules/ipfs-http-client/node_modules/any-signal/index.js":[function(require,module,exports) {
+/**
+ * Takes an array of AbortSignals and returns a single signal.
+ * If any signals are aborted, the returned signal will be aborted.
+ * @param {Array<AbortSignal>} signals
+ * @returns {AbortSignal}
+ */
+function anySignal (signals) {
+  const controller = new globalThis.AbortController()
+
+  function onAbort () {
+    controller.abort()
+
+    for (const signal of signals) {
+      if (!signal || !signal.removeEventListener) continue
+      signal.removeEventListener('abort', onAbort)
+    }
+  }
+
+  for (const signal of signals) {
+    if (!signal || !signal.addEventListener) continue
+    if (signal.aborted) {
+      onAbort()
+      break
+    }
+    signal.addEventListener('abort', onAbort)
+  }
+
+  return controller.signal
+}
+
+module.exports = anySignal
+module.exports.anySignal = anySignal
+
+},{}],"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -45009,7 +40807,7 @@ var createPut = configure.configure(function (api) {
   return put;
 });
 exports.createPut = createPut;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/ipfs-http-client/cjs/src/block/rm.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/ipfs-http-client/cjs/src/block/rm.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -45177,7 +40975,7 @@ function toCoreInterface(removed) {
 }
 
 exports.createRm = createRm;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/block/stat.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/block/stat.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -45250,7 +41048,7 @@ var createStat = configure.configure(function (api) {
   return stat;
 });
 exports.createStat = createStat;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/block/index.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/block/index.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -46443,7 +42241,7 @@ function _resolve() {
 }
 
 exports.resolve = resolve;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","err-code":"../node_modules/err-code/index.js"}],"../node_modules/it-first/index.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","err-code":"../node_modules/err-code/index.js"}],"../node_modules/it-first/index.js":[function(require,module,exports) {
 'use strict'
 
 /**
@@ -46790,7 +42588,7 @@ var createImport = configure.configure(function (api) {
   return dagImport;
 });
 exports.createImport = createImport;
-},{"../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/ipfs-http-client/cjs/src/dag/put.js":[function(require,module,exports) {
+},{"../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/ipfs-http-client/cjs/src/dag/put.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -46913,7 +42711,7 @@ var createPut = function createPut(codecs, options) {
 };
 
 exports.createPut = createPut;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/ipfs-http-client/cjs/src/dag/resolve.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/ipfs-http-client/cjs/src/dag/resolve.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -46985,7 +42783,7 @@ var createResolve = configure.configure(function (api) {
   return resolve;
 });
 exports.createResolve = createResolve;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/dag/index.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/dag/index.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -48433,7 +44231,7 @@ var createCp = configure.configure(function (api) {
   return cp;
 });
 exports.createCp = createCp;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/files/flush.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/files/flush.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -48512,7 +44310,7 @@ var createFlush = configure.configure(function (api) {
   return flush;
 });
 exports.createFlush = createFlush;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel-with-metadata.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel-with-metadata.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -48768,7 +44566,7 @@ function toCoreInterface(entry) {
 }
 
 exports.createLs = createLs;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/object-to-camel-with-metadata.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel-with-metadata.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/files/mkdir.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/object-to-camel-with-metadata.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel-with-metadata.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/files/mkdir.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -49106,7 +44904,7 @@ var createRm = configure.configure(function (api) {
   return rm;
 });
 exports.createRm = createRm;
-},{"../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","ipfs-utils/src/http.js":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/http.js"}],"../node_modules/ipfs-http-client/cjs/src/files/stat.js":[function(require,module,exports) {
+},{"../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","ipfs-utils/src/http.js":"../node_modules/ipfs-utils/src/http.js"}],"../node_modules/ipfs-http-client/cjs/src/files/stat.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -49186,7 +44984,7 @@ function toCoreInterface(entry) {
 }
 
 exports.createStat = createStat;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/object-to-camel-with-metadata.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel-with-metadata.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/files/touch.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/object-to-camel-with-metadata.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel-with-metadata.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/files/touch.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -50620,7 +46418,7 @@ var createData = configure.configure(function (api) {
   return data;
 });
 exports.createData = createData;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/get.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/get.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -50702,7 +46500,7 @@ var createGet = configure.configure(function (api) {
   return get;
 });
 exports.createGet = createGet;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","uint8arrays/from-string":"../node_modules/uint8arrays/cjs/src/from-string.js"}],"../node_modules/ipfs-http-client/cjs/src/object/links.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","uint8arrays/from-string":"../node_modules/uint8arrays/cjs/src/from-string.js"}],"../node_modules/ipfs-http-client/cjs/src/object/links.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -50778,7 +46576,7 @@ var createLinks = configure.configure(function (api) {
   return links;
 });
 exports.createLinks = createLinks;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/new.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/new.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -50851,7 +46649,7 @@ var createNew = configure.configure(function (api) {
   return newObject;
 });
 exports.createNew = createNew;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/put.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/put.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -50983,7 +46781,7 @@ var createStat = configure.configure(function (api) {
   return stat;
 });
 exports.createStat = createStat;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/add-link.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/add-link.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -51056,7 +46854,7 @@ var createAddLink = configure.configure(function (api) {
   return addLink;
 });
 exports.createAddLink = createAddLink;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/append-data.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/append-data.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -51145,7 +46943,7 @@ var createAppendData = configure.configure(function (api) {
   return appendData;
 });
 exports.createAppendData = createAppendData;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","../../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/rm-link.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","../../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/rm-link.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -51218,7 +47016,7 @@ var createRmLink = configure.configure(function (api) {
   return rmLink;
 });
 exports.createRmLink = createRmLink;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/set-data.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/set-data.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -51307,7 +47105,7 @@ var createSetData = configure.configure(function (api) {
   return setData;
 });
 exports.createSetData = createSetData;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","../../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/index.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","../../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","../../lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/ipfs-http-client/cjs/src/object/patch/index.js":[function(require,module,exports) {
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -51455,7 +47253,7 @@ function toPin(input) {
 
 exports.normaliseInput = normaliseInput;
 
-},{"err-code":"../node_modules/err-code/index.js","multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/add-all.js":[function(require,module,exports) {
+},{"err-code":"../node_modules/err-code/index.js","multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/add-all.js":[function(require,module,exports) {
 'use strict';
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it.return != null) it.return(); } finally { if (didErr) throw err; } } }; }
@@ -51730,7 +47528,7 @@ var createAddAll = configure.configure(function (api) {
   return addAll;
 });
 exports.createAddAll = createAddAll;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","ipfs-core-utils/pins/normalise-input":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/pins/normalise-input.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/add.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","ipfs-core-utils/pins/normalise-input":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/pins/normalise-input.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/add.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -51998,7 +47796,7 @@ var createLs = configure.configure(function (api) {
   return ls;
 });
 exports.createLs = createLs;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/rm-all.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/rm-all.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -52235,7 +48033,7 @@ var createRmAll = configure.configure(function (api) {
   return rmAll;
 });
 exports.createRmAll = createRmAll;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","ipfs-core-utils/pins/normalise-input":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/pins/normalise-input.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/rm.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","ipfs-core-utils/pins/normalise-input":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/pins/normalise-input.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/rm.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -52433,7 +48231,7 @@ exports.encodeAddParams = encodeAddParams;
 exports.encodeCID = encodeCID;
 exports.encodeQuery = encodeQuery;
 exports.encodeService = encodeService;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/remote/add.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/pin/remote/add.js":[function(require,module,exports) {
 'use strict';
 
 var _excluded = ["timeout", "signal", "headers"];
@@ -53133,7 +48931,7 @@ exports.rpcArrayToTextArray = rpcArrayToTextArray;
 exports.rpcToBytes = rpcToBytes;
 exports.rpcToText = rpcToText;
 exports.textToUrlSafeRpc = textToUrlSafeRpc;
-},{"uint8arrays/from-string":"../node_modules/uint8arrays/cjs/src/from-string.js","uint8arrays/to-string":"../node_modules/uint8arrays/cjs/src/to-string.js","multiformats/bases/base64":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/bases/base64.js"}],"../node_modules/ipfs-http-client/cjs/src/pubsub/ls.js":[function(require,module,exports) {
+},{"uint8arrays/from-string":"../node_modules/uint8arrays/cjs/src/from-string.js","uint8arrays/to-string":"../node_modules/uint8arrays/cjs/src/to-string.js","multiformats/bases/base64":"../node_modules/multiformats/cjs/src/bases/base64.js"}],"../node_modules/ipfs-http-client/cjs/src/pubsub/ls.js":[function(require,module,exports) {
 'use strict';
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -53919,7 +49717,7 @@ var createRefs = configure.configure(function (api, opts) {
   });
 });
 exports.createRefs = createRefs;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/object-to-camel.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","./local.js":"../node_modules/ipfs-http-client/cjs/src/refs/local.js"}],"../node_modules/ipfs-http-client/cjs/src/repo/gc.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/object-to-camel.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","./local.js":"../node_modules/ipfs-http-client/cjs/src/refs/local.js"}],"../node_modules/ipfs-http-client/cjs/src/repo/gc.js":[function(require,module,exports) {
 'use strict';
 
 function _wrapAsyncGenerator(fn) { return function () { return new _AsyncGenerator(fn.apply(this, arguments)); }; }
@@ -53999,7 +49797,7 @@ var createGc = configure.configure(function (api) {
   return gc;
 });
 exports.createGc = createGc;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/repo/stat.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","../lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","../lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/repo/stat.js":[function(require,module,exports) {
 'use strict';
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -54895,7 +50693,7 @@ function toCoreInterface(_ref4) {
 }
 
 exports.createAddAll = createAddAll;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","./lib/object-to-camel.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel.js","./lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","./lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","./lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/blob-to-it/index.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","./lib/object-to-camel.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel.js","./lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","ipfs-core-utils/multipart-request":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multipart-request.browser.js","./lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","./lib/abort-signal.js":"../node_modules/ipfs-http-client/cjs/src/lib/abort-signal.js"}],"../node_modules/blob-to-it/index.js":[function(require,module,exports) {
 /* eslint-env browser */
 
 'use strict'
@@ -55453,7 +51251,7 @@ var createGet = configure.configure(function (api) {
   return get;
 });
 exports.createGet = createGet;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","./lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","./lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/id.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","./lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","./lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/cjs/src/id.js":[function(require,module,exports) {
 'use strict';
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -55867,7 +51665,7 @@ function typeOf(link) {
 }
 
 exports.createLs = createLs;
-},{"multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","./lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","./lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","./files/stat.js":"../node_modules/ipfs-http-client/cjs/src/files/stat.js"}],"../node_modules/ipfs-http-client/cjs/src/mount.js":[function(require,module,exports) {
+},{"multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","./lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","./lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js","./files/stat.js":"../node_modules/ipfs-http-client/cjs/src/files/stat.js"}],"../node_modules/ipfs-http-client/cjs/src/mount.js":[function(require,module,exports) {
 'use strict';
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -56268,7 +52066,7 @@ var createVersion = configure.configure(function (api) {
   return version;
 });
 exports.createVersion = createVersion;
-},{"./lib/object-to-camel.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel.js","./lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","./lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/files/url-source.js":[function(require,module,exports) {
+},{"./lib/object-to-camel.js":"../node_modules/ipfs-http-client/cjs/src/lib/object-to-camel.js","./lib/configure.js":"../node_modules/ipfs-http-client/cjs/src/lib/configure.js","./lib/to-url-search-params.js":"../node_modules/ipfs-http-client/cjs/src/lib/to-url-search-params.js"}],"../node_modules/ipfs-utils/src/files/url-source.js":[function(require,module,exports) {
 'use strict'
 
 const HTTP = require('../http')
@@ -56301,7 +52099,7 @@ async function * readURLContent (url, options) {
 
 module.exports = urlSource
 
-},{"../http":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/http.js"}],"../node_modules/ipfs-http-client/cjs/src/index.js":[function(require,module,exports) {
+},{"../http":"../node_modules/ipfs-utils/src/http.js"}],"../node_modules/ipfs-http-client/cjs/src/index.js":[function(require,module,exports) {
 'use strict';
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -56543,7 +52341,7 @@ Object.defineProperty(exports, 'urlSource', {
 });
 exports.create = create;
 exports.globSource = globSource;
-},{"ipfs-core-utils/multibases":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multibases.js","ipfs-core-utils/multicodecs":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multicodecs.js","ipfs-core-utils/multihashes":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multihashes.js","@ipld/dag-pb":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-pb/cjs/src/index.js","@ipld/dag-cbor":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/cjs/index.js","@ipld/dag-json":"../node_modules/@ipld/dag-json/cjs/index.js","dag-jose":"../node_modules/dag-jose/lib/index.js","multiformats/hashes/identity":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/hashes/identity.js","multiformats/basics":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/basics.js","./bitswap/index.js":"../node_modules/ipfs-http-client/cjs/src/bitswap/index.js","./block/index.js":"../node_modules/ipfs-http-client/cjs/src/block/index.js","./bootstrap/index.js":"../node_modules/ipfs-http-client/cjs/src/bootstrap/index.js","./config/index.js":"../node_modules/ipfs-http-client/cjs/src/config/index.js","./dag/index.js":"../node_modules/ipfs-http-client/cjs/src/dag/index.js","./dht/index.js":"../node_modules/ipfs-http-client/cjs/src/dht/index.js","./diag/index.js":"../node_modules/ipfs-http-client/cjs/src/diag/index.js","./files/index.js":"../node_modules/ipfs-http-client/cjs/src/files/index.js","./key/index.js":"../node_modules/ipfs-http-client/cjs/src/key/index.js","./log/index.js":"../node_modules/ipfs-http-client/cjs/src/log/index.js","./name/index.js":"../node_modules/ipfs-http-client/cjs/src/name/index.js","./object/index.js":"../node_modules/ipfs-http-client/cjs/src/object/index.js","./pin/index.js":"../node_modules/ipfs-http-client/cjs/src/pin/index.js","./pubsub/index.js":"../node_modules/ipfs-http-client/cjs/src/pubsub/index.js","./refs/index.js":"../node_modules/ipfs-http-client/cjs/src/refs/index.js","./repo/index.js":"../node_modules/ipfs-http-client/cjs/src/repo/index.js","./stats/index.js":"../node_modules/ipfs-http-client/cjs/src/stats/index.js","./swarm/index.js":"../node_modules/ipfs-http-client/cjs/src/swarm/index.js","./add.js":"../node_modules/ipfs-http-client/cjs/src/add.js","./add-all.js":"../node_modules/ipfs-http-client/cjs/src/add-all.js","./cat.js":"../node_modules/ipfs-http-client/cjs/src/cat.js","./commands.js":"../node_modules/ipfs-http-client/cjs/src/commands.js","./dns.js":"../node_modules/ipfs-http-client/cjs/src/dns.js","./get-endpoint-config.js":"../node_modules/ipfs-http-client/cjs/src/get-endpoint-config.js","./get.js":"../node_modules/ipfs-http-client/cjs/src/get.js","./id.js":"../node_modules/ipfs-http-client/cjs/src/id.js","./is-online.js":"../node_modules/ipfs-http-client/cjs/src/is-online.js","./ls.js":"../node_modules/ipfs-http-client/cjs/src/ls.js","./mount.js":"../node_modules/ipfs-http-client/cjs/src/mount.js","./ping.js":"../node_modules/ipfs-http-client/cjs/src/ping.js","./resolve.js":"../node_modules/ipfs-http-client/cjs/src/resolve.js","./start.js":"../node_modules/ipfs-http-client/cjs/src/start.js","./stop.js":"../node_modules/ipfs-http-client/cjs/src/stop.js","./version.js":"../node_modules/ipfs-http-client/cjs/src/version.js","ipfs-utils/src/files/glob-source.js":"../node_modules/parcel-bundler/src/builtins/_empty.js","multiformats/cid":"../node_modules/ipfs-http-client/node_modules/multiformats/cjs/src/cid.js","multiaddr":"../node_modules/multiaddr/src/index.js","ipfs-utils/src/files/url-source.js":"../node_modules/ipfs-http-client/node_modules/ipfs-utils/src/files/url-source.js"}],"js/near-work.js":[function(require,module,exports) {
+},{"ipfs-core-utils/multibases":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multibases.js","ipfs-core-utils/multicodecs":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multicodecs.js","ipfs-core-utils/multihashes":"../node_modules/ipfs-http-client/node_modules/ipfs-core-utils/cjs/src/multihashes.js","@ipld/dag-pb":"../node_modules/@ipld/dag-pb/cjs/src/index.js","@ipld/dag-cbor":"../node_modules/ipfs-http-client/node_modules/@ipld/dag-cbor/cjs/index.js","@ipld/dag-json":"../node_modules/@ipld/dag-json/cjs/index.js","dag-jose":"../node_modules/dag-jose/lib/index.js","multiformats/hashes/identity":"../node_modules/multiformats/cjs/src/hashes/identity.js","multiformats/basics":"../node_modules/multiformats/cjs/src/basics.js","./bitswap/index.js":"../node_modules/ipfs-http-client/cjs/src/bitswap/index.js","./block/index.js":"../node_modules/ipfs-http-client/cjs/src/block/index.js","./bootstrap/index.js":"../node_modules/ipfs-http-client/cjs/src/bootstrap/index.js","./config/index.js":"../node_modules/ipfs-http-client/cjs/src/config/index.js","./dag/index.js":"../node_modules/ipfs-http-client/cjs/src/dag/index.js","./dht/index.js":"../node_modules/ipfs-http-client/cjs/src/dht/index.js","./diag/index.js":"../node_modules/ipfs-http-client/cjs/src/diag/index.js","./files/index.js":"../node_modules/ipfs-http-client/cjs/src/files/index.js","./key/index.js":"../node_modules/ipfs-http-client/cjs/src/key/index.js","./log/index.js":"../node_modules/ipfs-http-client/cjs/src/log/index.js","./name/index.js":"../node_modules/ipfs-http-client/cjs/src/name/index.js","./object/index.js":"../node_modules/ipfs-http-client/cjs/src/object/index.js","./pin/index.js":"../node_modules/ipfs-http-client/cjs/src/pin/index.js","./pubsub/index.js":"../node_modules/ipfs-http-client/cjs/src/pubsub/index.js","./refs/index.js":"../node_modules/ipfs-http-client/cjs/src/refs/index.js","./repo/index.js":"../node_modules/ipfs-http-client/cjs/src/repo/index.js","./stats/index.js":"../node_modules/ipfs-http-client/cjs/src/stats/index.js","./swarm/index.js":"../node_modules/ipfs-http-client/cjs/src/swarm/index.js","./add.js":"../node_modules/ipfs-http-client/cjs/src/add.js","./add-all.js":"../node_modules/ipfs-http-client/cjs/src/add-all.js","./cat.js":"../node_modules/ipfs-http-client/cjs/src/cat.js","./commands.js":"../node_modules/ipfs-http-client/cjs/src/commands.js","./dns.js":"../node_modules/ipfs-http-client/cjs/src/dns.js","./get-endpoint-config.js":"../node_modules/ipfs-http-client/cjs/src/get-endpoint-config.js","./get.js":"../node_modules/ipfs-http-client/cjs/src/get.js","./id.js":"../node_modules/ipfs-http-client/cjs/src/id.js","./is-online.js":"../node_modules/ipfs-http-client/cjs/src/is-online.js","./ls.js":"../node_modules/ipfs-http-client/cjs/src/ls.js","./mount.js":"../node_modules/ipfs-http-client/cjs/src/mount.js","./ping.js":"../node_modules/ipfs-http-client/cjs/src/ping.js","./resolve.js":"../node_modules/ipfs-http-client/cjs/src/resolve.js","./start.js":"../node_modules/ipfs-http-client/cjs/src/start.js","./stop.js":"../node_modules/ipfs-http-client/cjs/src/stop.js","./version.js":"../node_modules/ipfs-http-client/cjs/src/version.js","ipfs-utils/src/files/glob-source.js":"../node_modules/parcel-bundler/src/builtins/_empty.js","multiformats/cid":"../node_modules/multiformats/cjs/src/cid.js","multiaddr":"../node_modules/multiaddr/src/index.js","ipfs-utils/src/files/url-source.js":"../node_modules/ipfs-utils/src/files/url-source.js"}],"js/near-work.js":[function(require,module,exports) {
 "use strict";
 
 var _runtime = require("regenerator-runtime/runtime");
@@ -56778,7 +52576,7 @@ function _update_project_list() {
           case 31:
             console.log('type_pro:');
             console.log(projects_array[i].status);
-            project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].status, projects_array[i].active, projects_array[i].receiver);
+            project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].status, projects_array[i].active, projects_array[i].receiver, projects_array[i].metadata.type_pro);
 
           case 34:
             i++;
@@ -56795,7 +52593,7 @@ function _update_project_list() {
   return _update_project_list.apply(this, arguments);
 }
 
-function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active, receiver) {
+function project_list(number, name, img, shortinfo, ammount, money, time, status, active, receiver, type_pro) {
   console.log(active);
   var carusel = '';
   var card_body = '';
@@ -56829,7 +52627,7 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
     }
 
     carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div> <div class="img_top_text">' + name + '</div>';
-  } else carusel += '<div><img src="' + img[0] + '" class = "d-block carusel_img w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
+  } else carusel += '<div><img src="' + img[0] + '" class = "d-block carusel_img rounded-top w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
 
   if (status == 2) {
     project_cart = '<div class="col"><div class="card shadow-sm"> <span class="position-absolute top-0 start-50 translate-middle p-2 bg-premium"><span class="visually-hidden">New alerts</span></span>' + carusel;
@@ -56852,9 +52650,8 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
   }
 
   project_cart += card_body + '</div>';
-  console.log(type);
 
-  if (type == true) {
+  if (type_pro == true) {
     document.getElementById("commertial_projects").innerHTML += project_cart;
   } else {
     document.getElementById("nonprofit_projects").innerHTML += project_cart;
@@ -57309,7 +53106,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "33955" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "39365" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Crowndfounding on Near</title>
+
+    <style>.bd-placeholder-img {
+            font-size: 1.125rem;
+            text-anchor: middle;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+        
+        @media (min-width: 768px) {
+            .bd-placeholder-img-lg {
+                font-size: 3.5rem;
+            }
+        }</style>
+    <link href="/bootstrap.8fed14c2.css" type="text/css" rel="stylesheet">
+    <link href="/user.d37578e4.css" type="text/css" rel="stylesheet">
+    <link rel="stylesheet" href="/grapes.min.951c4b29.css">
+<script src="/user.d37578e4.js"></script><script src="/grapes.min.951c4b29.js"></script></head>
+
+<body>
+    <header class="p-3 bg-dark text-white">
+        <div class="container">
+            <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+                <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none">
+                    <svg class="bi me-2" width="40" height="32" role="img" aria-label="Bootstrap"><use xlink:href="#bootstrap"></use></svg>
+                </a>
+
+                <ul id="topnav" class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                    <li><a href="/index.html#commertial" class="navbtn nav-link px-2 text-secondary">Commertial</a></li>
+                    <li><a href="/index.html#nonProfit" class="navbtn nav-link px-2 text-white">NonProfit</a></li>
+                    <li><a href="/index.html#price" class="navbtn nav-link px-2 text-white">Pricing</a></li>
+                    <li><a href="/index.html#faq" class="navbtn nav-link px-2 text-white">FAQs</a></li>
+                    <li><a href="/index.html#about" class="navbtn nav-link px-2 text-white">About</a></li>
+                    <li><a href="#" id="create_project_modal" class="nav-link px-2 text-white">Create Project</a> </li>
+                </ul>
+
+                <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-lg-3">
+                    <input type="search" class="form-control form-control-dark" placeholder="Search..." aria-label="Search">
+                </form>
+                <a id="account_id" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none signed-out"></a>
+                <div class="text-end">
+                    <button type="button" id="sign-in" class="btn btn-outline-light me-2 signed-in">Login with NEAR</button>
+
+                    <button type="button" id="sign-out" class="btn btn-outline-light me-2 signed-out">Sign out from NEAR</button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main>
+        <div id="mainbox">
+            <div style="float: left; width: 12vw; height: 100vh;">
+                <div class="d-flex flex-column flex-shrink-0 text-white bg-dark" style="height: 100vh;">
+                    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+                        <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"></use></svg>
+                        <span class="fs-4">Sidebar</span>
+                    </a>
+                    <hr>
+                    <ul id="sidenav" class="nav nav-pills flex-column mb-auto">
+                        <li class="nav-item">
+                            <a href="#profile" class="nav-link side-link text-secondary" aria-current="page">Profile</a>
+                        </li>
+                        <li>
+                            <a href="#myprojects" class="nav-link side-link text-white">My projects</a>
+                        </li>
+                        <li>
+                            <a href="#createProjectPage" class="nav-link side-link text-white">Page builder</a>
+                        </li>
+                    </ul>
+                    <hr>
+                    <div class="dropdown">
+                        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="https://github.com/mdo.png" alt="" width="32" height="32" class="rounded-circle me-2">
+                            <strong>mdo</strong>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+                            <li><a class="dropdown-item" href="#">New project...</a></li>
+                            <li><a class="dropdown-item" href="#">Settings</a></li>
+                            <li><a class="dropdown-item" href="#">Profile</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="#">Sign out</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div id="box" style="float:right; width: 87.2vw;">
+                <div id="createProjectPage" style="display: none;">
+                    <div id="select-div">
+                        <select id="select_pro_page" class="form-select" aria-label="Default select example">
+                        <option selected="">Open this select menu</option>
+                        <option value="1">One</option>
+                        <option value="2">Two</option>
+                        <option value="3">Three</option>
+                    </select>
+                    </div>
+                    <div id="gjs"></div>
+                </div>
+                <div id="myprojects" style="display: none;">
+                    <div class="tab">
+                        <button class="tablinks" onclick="openProjectList(event, 'commertial_projects')">Commertial</button>
+                        <button class="tablinks" onclick="openProjectList(event, 'nonprofit_projects')">Non Profit</button>
+                    </div>
+                    <script>function openProjectList(evt, tabName) {
+  var i, tablinks; // Get all elements with class="tabcontent" and hide them
+
+  document.getElementById("commertial_projects").style.display = "none";
+  document.getElementById("nonprofit_projects").style.display = "none"; // Get all elements with class="tablinks" and remove the class "active"
+
+  tablinks = document.getElementsByClassName("tablinks");
+
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  } // Show the current tab, and add an "active" class to the button that opened the tab
+
+
+  document.getElementById(tabName).style.display = "block";
+  evt.currentTarget.className += " active";
+}</script>
+                    <div class="album py-5 bg-light">
+                        <div class="container" id="container">
+                            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="commertial_projects">
+
+                            </div>
+                            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="nonprofit_projects" style="display:none;">
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="profile">
+
+                </div>
+            </div>
+
+        </div>
+        <script>sidenav.onclick = function (event) {
+  if (event.target.nodeName != 'A') return;
+
+  if (event.target.classList.contains('side-link')) {
+    var href = event.target.getAttribute('href');
+    menubtnarr = document.getElementsByClassName('side-link');
+
+    for (var i = 0; i < menubtnarr.length; i++) {
+      thishref = menubtnarr[i].getAttribute('href');
+      console.log(thishref);
+
+      if (thishref != href) {
+        menubtnarr[i].classList.remove("text-secondary");
+        menubtnarr[i].classList.add("text-white");
+        console.log('1: ' + thishref);
+        thishref = thishref.replace('#', '');
+        console.log('2: ' + thishref);
+        document.getElementById(thishref).style.display = 'none';
+      } else {
+        menubtnarr[i].classList.add("text-secondary");
+        menubtnarr[i].classList.remove("text-white");
+        console.log(thishref);
+        thishref = thishref.replace('#', '');
+        document.getElementById(thishref).style.display = 'block';
+      }
+    }
+  }
+};</script>
+    </main>
+
+    <script src="/user_page.08952a40.js"></script>
+
+</body>
+
+</html>

@@ -100,13 +100,14 @@ async function update_project_list() {
                 }
                 console.log('type_pro:');
                 console.log(projects_array[i].status);
-                project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].metadata.type_pro, projects_array[i].status, projects_array[i].active, projects_array[i].receiver);
+                project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].status, projects_array[i].active, projects_array[i].receiver, projects_array[i].metadata.type_pro);
+
             }
         }
     }
 }
 
-function project_list(number, name, img, shortinfo, ammount, money, time, type, status, active, receiver) {
+function project_list(number, name, img, shortinfo, ammount, money, time, status, active, receiver, type_pro) {
     console.log(active);
     let carusel = '';
     let card_body = '';
@@ -134,7 +135,7 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
             carusel += '<div class = "carousel-item"><img src="' + img[i] + '" class = "carusel_img rounded-top d-block w-100" alt = "loadError" /></div>';
         }
         carusel += '</div><button class = "carousel-control-prev" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "prev" > <span class = "carousel-control-prev-icon" aria-hidden = "true" > <span class = "visually-hidden" > Previous < /span> </span></button > <button class = "carousel-control-next" type = "button" data-bs-target = "#carousel' + number + '" data-bs-slide = "next"> <span class = "carousel-control-next-icon" aria-hidden = "true"><span class = "visually-hidden" > Next </span> </span></button></div> <div class="img_top_text">' + name + '</div>';
-    } else carusel += '<div><img src="' + img[0] + '" class = "d-block carusel_img w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
+    } else carusel += '<div><img src="' + img[0] + '" class = "d-block carusel_img rounded-top w-100" alt = "loadError" /><div class="img_top_text">' + name + '</div>';
     if (status == 2) {
         project_cart = '<div class="col"><div class="card shadow-sm"> <span class="position-absolute top-0 start-50 translate-middle p-2 bg-premium"><span class="visually-hidden">New alerts</span></span>' + carusel;
     } else if (status == 1) {
@@ -153,8 +154,7 @@ function project_list(number, name, img, shortinfo, ammount, money, time, type, 
         card_body += '<div class = "d-flex pt-3 justify-content-between align-items-center"> <div class = "btn-group"><button type = "button" class = "btn btn-sm btn-outline-secondary" onclick="view_pro(\'' + name + '\')"> View </button> </div > <small class = "text-muted" > ' + receiver + ' </small><small class = "text-muted" > "Found end" </small> </div > </div> </div>';
     }
     project_cart += card_body + '</div>';
-    console.log(type);
-    if (type == true) {
+    if (type_pro == true) {
         document.getElementById("commertial_projects").innerHTML += project_cart;
     } else {
         document.getElementById("nonprofit_projects").innerHTML += project_cart;

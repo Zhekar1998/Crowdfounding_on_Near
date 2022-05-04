@@ -23,7 +23,7 @@
             }
         }</style>
     <link href="/modals.a49a3a1b.css" type="text/css" rel="stylesheet">
-<script src="/bootstrap.8fed14c2.js"></script><script src="/modals.a49a3a1b.js"></script></head>
+<script src="/bootstrap.8fed14c2.js"></script><script src="/modals.a49a3a1b.js"></script><script src="/user_home.js"></script></head>
 
 <body>
 
@@ -46,7 +46,7 @@
                 <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-lg-3">
                     <input type="search" class="form-control form-control-dark" placeholder="Search..." aria-label="Search">
                 </form>
-                <a id="account_id" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none signed-out"></a>
+                <a href="/user_home.html" id="account_id" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none signed-out"></a>
                 <div class="text-end">
                     <button type="button" id="sign-in" class="btn btn-outline-light me-2 signed-in">Login with NEAR</button>
 
@@ -103,22 +103,7 @@
                     <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="commertial_projects">
 
 
-                        <div class="col" id="col">
-                            <div class="card shadow-sm">
-                                <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"></rect><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
 
-                                <div class="card-body">
-                                    <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
-                                        </div>
-                                        <small class="text-muted">9 mins</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -151,9 +136,11 @@
         <div id="about" style="display: none;"><text>In Develop</text></div>
         <div id="project-body" style="display: none;"></div>
         <script>function donate(project_name, receiver) {
-  document.getElementById("donate_pro_name").innerText = project_name;
-  document.getElementById("receiver_donate").innerText = receiver;
-  document.getElementById("donateBox").style.display = "block";
+  if (window.walletAccount.isSignedIn()) {
+    document.getElementById("donate_pro_name").innerText = project_name;
+    document.getElementById("receiver_donate").innerText = receiver;
+    document.getElementById("donateBox").style.display = "block";
+  } else document.getElementById("modalSignIn").style.display = "block";
 }</script>
         <script>function view_pro(project_name) {
   document.getElementById("commertial").style.display = "none";
@@ -272,7 +259,7 @@
                     <div class="modal-header p-5 pb-4 border-bottom-0">
                         <!-- <h5 class="modal-title">Modal title</h5> -->
                         <h2 class="fw-bold mb-0">Sign in with Near</h2>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" id="btn-close_singin" aria-label="Close"></button>
                     </div>
 
                     <div class="modal-body p-5 pt-0">
@@ -289,10 +276,10 @@
                     <div class="modal-header p-5 pb-4 border-bottom-0">
 
                         <h2 class="fw-bold mb-0">Donate to project</h2>
-                        <h2 id="donate_pro_name" class="fw-bold mb-0"></h2>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
 
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" id="btn-close_donateBox" aria-label="Close"></button>
+                    </div>
+                    <h2 id="donate_pro_name" class="fw-bold mb-0"></h2>
                     <div class="modal-body p-5 pt-0">
                         <label for="Near_amount" class="form-label">Donate summ</label>
                         <div class="input-group mb-3">
@@ -302,7 +289,7 @@
                         <label id="receiver_donate"></label>
                         <lable id="bonusLable">You bonuse is:</lable>
                         <h3 id="bonus-name-db"></h3>
-                        <image id="bonus-img" src="" alt="error"></image>
+                        <image id="bonus-img" class="carusel_img rounded-4 d-block w-100" src="" alt="error"></image>
 
                         <button class="w-100 mb-2 btn btn-lg rounded-4 btn-primary" id="donate-btn" type="submit">donate</button>
 
@@ -317,7 +304,7 @@
                     <div class="modal-header p-5 pb-4 border-bottom-0">
                         <!-- <h5 class="modal-title">Modal title</h5> -->
                         <h2 class="fw-bold mb-0">Create your project page</h2>
-
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" id="btn-close_createpage" aria-label="Close"></button>
                     </div>
 
                     <div class="modal-body p-5 pt-0">
