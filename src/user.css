@@ -31,5 +31,47 @@
     background-color: #ccc;
 }
 
+.img_top_text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: yellow;
+    font-size: x-large;
+    font-weight: bold;
+}
+
+.carusel_img {
+    width: 100%;
+    aspect-ratio: 16/9;
+}
+
+.alignleft {
+    float: left;
+}
+
+.alignright {
+    float: right;
+}
+
+.bg-premium {
+    background-image: url(img/rsz_index-removebg-preview.png);
+    height: 56px;
+    width: 56px;
+    z-index: 1;
+}
+
+.bg-asocc {
+    background-image: url(img/rsz_3-removebg-preview.png);
+    height: 56px;
+    width: 56px;
+    z-index: 1;
+}
+
+.bg-ukraine {
+    background: url(img//sl_032922_49370_45.jpg) 100% 50% no-repeat;
+    background-size: cover;
+}
+
 
 /* Style the tab content */

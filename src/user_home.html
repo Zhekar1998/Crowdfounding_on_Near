@@ -22,7 +22,9 @@
     </style>
     <link href="../css/bootstrap.css" type="text/css" rel="stylesheet">
     <link href="user.css" type="text/css" rel="stylesheet">
+    <link href="profile.css" type="text/css" rel="stylesheet">
     <link rel="stylesheet" href="../grapesjs/dist/css/grapes.min.css">
+    <script src="../js/bootstrap.bundle.min.js"></script>
 </head>
 
 <body>
@@ -34,7 +36,7 @@
                 </a>
 
                 <ul id="topnav" class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
-                    <li><a href="index.html#commertial" class="navbtn nav-link px-2 text-secondary">Commertial</a></li>
+                    <li><a href="index.html#commertial" class="navbtn nav-link px-2 text-white">Commertial</a></li>
                     <li><a href="index.html#nonProfit" class="navbtn nav-link px-2 text-white">NonProfit</a></li>
                     <li><a href="index.html#price" class="navbtn nav-link px-2 text-white">Pricing</a></li>
                     <li><a href="index.html#faq" class="navbtn nav-link px-2 text-white">FAQs</a></li>
@@ -60,7 +62,7 @@
                 <div class="d-flex flex-column flex-shrink-0 text-white bg-dark" style="height: 100vh;">
                     <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
                         <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"/></svg>
-                        <span class="fs-4">Sidebar</span>
+                        <span class="fs-4">SpaceWay</span>
                     </a>
                     <hr>
                     <ul id="sidenav" class="nav nav-pills flex-column mb-auto">
@@ -106,7 +108,7 @@
                 </div>
                 <div id="myprojects" style="display: none;">
                     <div class="tab">
-                        <button class="tablinks" onclick="openProjectList(event, 'commertial_projects')">Commertial</button>
+                        <button class="tablinks active" onclick="openProjectList(event, 'commertial_projects')">Commertial</button>
                         <button class="tablinks" onclick="openProjectList(event, 'nonprofit_projects')">Non Profit</button>
                     </div>
                     <script>
@@ -125,23 +127,196 @@
                             }
 
                             // Show the current tab, and add an "active" class to the button that opened the tab
-                            document.getElementById(tabName).style.display = "block";
+                            document.getElementById(tabName).style.display = "flex";
                             evt.currentTarget.className += " active";
                         }
                     </script>
                     <div class="album py-5 bg-light">
                         <div class="container" id="container">
-                            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="commertial_projects">
+                            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="commertial_projects" style="display: flex;">
 
                             </div>
-                            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="nonprofit_projects" style="display:none;">
+                            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" id="nonprofit_projects" style="display: none;">
 
                             </div>
                         </div>
                     </div>
                 </div>
                 <div id="profile">
+                    <div class="container">
+                        <div class="main-body">
+                            <div class="row gutters-sm">
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <div class="d-flex flex-column align-items-center text-center">
+                                                <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="Admin" class="rounded-circle" width="150">
+                                                <div class="mt-3">
+                                                    <h4 id="account"></h4>
+                                                    <p id="full_name" class="text-secondary mb-1"></p>
+                                                    <p id="country" class="text-muted font-size-sm"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mt-3">
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-globe mr-2 icon-inline"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>Website</h6>
+                                                <span id="website" class="text-secondary">https://bootdey.com</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github mr-2 icon-inline"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>Github</h6>
+                                                <span id="github" class="text-secondary">bootdey</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter mr-2 icon-inline text-info"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>Twitter</h6>
+                                                <span id="twitter" class="text-secondary">@bootdey</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-instagram mr-2 icon-inline text-danger"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>Instagram</h6>
+                                                <span id="instagramm" class="text-secondary">bootdey</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook mr-2 icon-inline text-primary"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>Facebook</h6>
+                                                <span id="facebook" class="text-secondary">bootdey</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook mr-2 icon-inline text-primary"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>Telegram</h6>
+                                                <span id="telegram" class="text-secondary">bootdey</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-sm-3">
+                                                    <h6 class="mb-0">Full Name</h6>
+                                                </div>
+                                                <div id="full_name2" class="col-sm-9 text-secondary">
 
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div class="row">
+                                                <div class="col-sm-3">
+                                                    <h6 class="mb-0">Email</h6>
+                                                </div>
+                                                <div id="email" class="col-sm-9 text-secondary">
+                                                    fip@jukmuh.al
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div class="row">
+                                                <div class="col-sm-3">
+                                                    <h6 class="mb-0">Phone</h6>
+                                                </div>
+                                                <div id="phone" class="col-sm-9 text-secondary">
+                                                    (239) 816-9029
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div class="row">
+                                                <div class="col-sm-3">
+                                                    <h6 class="mb-0">Address line 1</h6>
+                                                </div>
+                                                <div id="adress_f1" class="col-sm-9 text-secondary">
+
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div class="row">
+                                                <div class="col-sm-3">
+                                                    <h6 class="mb-0">Address line 2</h6>
+                                                </div>
+                                                <div id="adress_f2" class="col-sm-9 text-secondary">
+
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div class="row">
+                                                <div class="col-sm-3">
+                                                    <h6 class="mb-0">Postall Index</h6>
+                                                </div>
+                                                <div id="posstal_index" class="col-sm-9 text-secondary">
+
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div class="row">
+                                                <div class="col-sm-12">
+                                                    <a id="edit_profile" class="btn btn-info " target="__blank" href="#">Edit</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row gutters-sm">
+                                        <div class="col-sm-6 mb-3">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="d-flex align-items-center mb-3"><i class="material-icons text-info mr-2">assignment</i>Project Status</h6>
+                                                    <small>Web Design</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small>Website Markup</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 72%" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small>One Page</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 89%" aria-valuenow="89" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small>Mobile Template</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 55%" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small>Backend API</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 66%" aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6 mb-3">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="d-flex align-items-center mb-3"><i class="material-icons text-info mr-2">assignment</i>Project Status</h6>
+                                                    <small>Web Design</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small>Website Markup</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 72%" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small>One Page</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 89%" aria-valuenow="89" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small>Mobile Template</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 55%" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small>Backend API</small>
+                                                    <div class="progress mb-3" style="height: 5px">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 66%" aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -173,10 +348,319 @@
                 }
             }
         </script>
-    </main>
+        <!---------------------------------------------MODALS---------------------------------------------------->
 
+        <div id="create_pro" class="modal">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content rounded-5 shadow">
+                    <div class="modal-header p-5 pb-4 border-bottom-0">
+                        <!-- <h5 class="modal-title">Modal title</h5> -->
+                        <h2 class="fw-bold mb-0">Create project</h2>
+                        <button type="button" id="btn-close-pro-create" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body p-5 pt-0">
+                        <form>
+                            <div class="form-floating mb-3">
+                                <input id="pro_name" type="text" class="form-control rounded-4" id="floatingName" placeholder="Example Project">
+                                <label for="floatingName">Project name</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="inlineRadioOptions1" id="inlineRadio1_1" value="Commertial" checked>
+                                    <label class="form-check-label" for="inlineRadio1_1">Commertial</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="inlineRadioOptions1" id="inlineRadio1_2" value="non_profit">
+                                    <label class="form-check-label" for="inlineRadio1_2">Non Profit</label>
+                                </div>
+                            </div>
+
+                            <div class="form-floating mb-3">
+                                <textarea type="text" class="form-control rounded-4" id="floatingShortInfo" maxlength="500" placeholder="Short info" style="height:150px;"></textarea>
+                                <label for="floatingShortInfo">Short info</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="inlineRadioOptions2" id="inlineRadio2_1" value="option1" checked>
+                                    <label class="form-check-label" for="inlineRadio2_1">Full time founding</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="inlineRadioOptions2" id="inlineRadio2_2" value="option2">
+                                    <label class="form-check-label" for="inlineRadio2_2">Summ founding</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <form enctype="multipart/form-data" method="post">
+                                    <label for="formFile" class="form-label">Project images</label>
+                                    <div id="img_add" class="mb-1">
+                                        <input class="form-control" name="image" type="file" accept="image/png, image/gif, image/jpeg" id="formFile">
+                                    </div>
+                                    <button type="button" id="remove_img_btn" class="btn btn-warning btn-sm" style="width: 100%; display: none">Remove images</button>
+                                    <button type="button" id="add_img_btn" class="btn btn-secondary btn-sm" style="width: 100%">Add more images</button>
+                                </form>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input class="form-control rounded-4" type="url" pattern="https://.*" placeholder="https://youtube.com/" id="formVideoURL">
+                                <label for="formVideoURL" class="form-label">Project video URL (Youtube)</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input class="form-control rounded-4" type="text" id="Project_tags" placeholder="Project tags">
+                                <label for="Project_tags" class="form-label">Project tags</label>
+                            </div>
+
+                            <label for="Near_amount" class="form-label">Amount on Near</label>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">$NEAR</span>
+                                <input id="Near_amount" type="number" class="form-control rounded-4" aria-label="Amount (on Near)">
+                            </div>
+
+                            <label for="dolar_amount" class="form-label">About amount on USD (current currency rate)</label>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">$</span>
+                                <input type="number" id="dolar_amount" class="form-control rounded-4" aria-label="About amount on USD (current currency rate)">
+
+                            </div>
+                            <hr class="my-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" id="premium_check" type="checkbox" id="buyPremium">
+                                <label class="form-check-label" for="buyPremium">Buy premium for project (20 $Near)</label>
+                            </div>
+                            <hr class="my-4">
+                            <h2>NFT-base bonuses creation</h2>
+                            <div id="NFT_create_place"></div>
+                            <div>
+                                <button type="button" id="remove-nft_button" class="remove_btn w-100 mb-3 btn btn-lg rounded-4 btn-danger" style="display: none">Remove</button>
+                            </div>
+                            <button id="add_nft_button" class="w-100 mb-2 btn btn-lg rounded-4 btn-secondary" type="button">Add NFT</button>
+                            <hr class="my-4">
+                            <button id="create_btn" class="w-100 mb-2 btn btn-lg rounded-4 btn-primary" type="submit">Create Project</button>
+                            <small class="text-muted">By clicking Create Project, you agree to the terms of use.</small>
+                            <hr class="my-4">
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="change_profile" class="modal" style="display: none;">
+            <div class="modal-textedit" role="document">
+                <div class="modal-content rounded-5 shadow">
+                    <div class="modal-header p-5 pb-4 border-bottom-0">
+                        <!-- <h5 class="modal-title">Modal title</h5> -->
+                        <h2 class="fw-bold mb-0">Update your profile</h2>
+                        <button type="button" id="btn-close-profile" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="container">
+                            <div class="main-body">
+                                <div class="row gutters-sm">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="d-flex flex-column align-items-center text-center">
+                                                    <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="Admin" class="rounded-circle" width="150">
+                                                    <div class="mt-3">
+                                                        <h4 id="account_modal"></h4>
+                                                        <p id="full_name_modal" class="text-secondary mb-1"></p>
+                                                        <p id="country_modal" class="text-muted font-size-sm"></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card mt-3">
+                                            <ul class="list-group list-group-flush">
+                                                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                    <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-globe mr-2 icon-inline"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>Website</h6>
+                                                    <input id="website_input" type="url" class="text-secondary" value="https://"></input>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                    <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github mr-2 icon-inline"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>Github</h6>
+                                                    <input id="github_input" type="text" class="text-secondary"></input>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                    <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter mr-2 icon-inline text-info"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>Twitter</h6>
+                                                    <input id="twitter_input" type="text" class="text-secondary" value="@"></input>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                    <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-instagram mr-2 icon-inline text-danger"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>Instagram</h6>
+                                                    <input id="instagramm_input" type="text" class="text-secondary"></input>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                    <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook mr-2 icon-inline text-primary"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>Facebook</h6>
+                                                    <input id="facebook_input" class="text-secondary"></input>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                                    <h6 class="mb-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook mr-2 icon-inline text-primary"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>Telegram</h6>
+                                                    <input id="telegram_input" type="text" class="text-secondary"></input>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-8">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="row mb-3">
+                                                    <div class="col-sm-3">
+                                                        <h6 class="mb-0">Full Name</h6>
+                                                    </div>
+                                                    <div class="col-sm-9 text-secondary">
+                                                        <input id="full_name_input" type="text" class="form-control" value="John Doe">
+                                                    </div>
+                                                </div>
+                                                <div class="row mb-3">
+                                                    <div class="col-sm-3">
+                                                        <h6 class="mb-0">Email</h6>
+                                                    </div>
+                                                    <div class="col-sm-9 text-secondary">
+                                                        <input id="email_input" type="email" class="form-control" value="john@example.com">
+                                                    </div>
+                                                </div>
+                                                <div class="row mb-3">
+                                                    <div class="col-sm-3">
+                                                        <h6 class="mb-0">Phone</h6>
+                                                    </div>
+                                                    <div class="col-sm-9 text-secondary">
+                                                        <input id="tel_input" type="tel" class="form-control">
+                                                    </div>
+                                                </div>
+
+                                                <div class="row mb-3">
+                                                    <div class="col-sm-3">
+                                                        <h6 class="mb-0">Address line 1</h6>
+                                                    </div>
+                                                    <div class="col-sm-9 text-secondary">
+                                                        <input id="adress_f1_input" type="text" class="form-control" value="">
+                                                    </div>
+                                                </div>
+                                                <div class="row mb-3">
+                                                    <div class="col-sm-3">
+                                                        <h6 class="mb-0">Address line 2</h6>
+                                                    </div>
+                                                    <div class="col-sm-9 text-secondary">
+                                                        <input id="adress_f2_input" type="text" class="form-control" value="">
+                                                    </div>
+                                                </div>
+                                                <div class="row mb-3">
+                                                    <div class="col-sm-3">
+                                                        <h6 class="mb-0">Posstal index</h6>
+                                                    </div>
+                                                    <div class="col-sm-9 text-secondary">
+                                                        <input id="postal_input" type="text" class="form-control" value="">
+                                                    </div>
+                                                </div>
+                                                <div class="row mb-3">
+                                                    <div class="col-sm-3">
+                                                        <h6 class="mb-0">Country</h6>
+                                                    </div>
+                                                    <div class="col-sm-9 text-secondary">
+                                                        <input id="country_input" type="text" class="form-control" value="">
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-sm-3"></div>
+                                                    <div class="col-sm-9 text-secondary">
+                                                        <button id="profilebutton" class="btn btn-primary px-4">Save Changes</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <div class="card">
+                                                    <div class="card-body">
+                                                        <h5 class="d-flex align-items-center mb-3">Project Status</h5>
+                                                        <p>Web Design</p>
+                                                        <div class="progress mb-3" style="height: 5px">
+                                                            <div class="progress-bar bg-primary" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                                                        </div>
+                                                        <p>Website Markup</p>
+                                                        <div class="progress mb-3" style="height: 5px">
+                                                            <div class="progress-bar bg-danger" role="progressbar" style="width: 72%" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100"></div>
+                                                        </div>
+                                                        <p>One Page</p>
+                                                        <div class="progress mb-3" style="height: 5px">
+                                                            <div class="progress-bar bg-success" role="progressbar" style="width: 89%" aria-valuenow="89" aria-valuemin="0" aria-valuemax="100"></div>
+                                                        </div>
+                                                        <p>Mobile Template</p>
+                                                        <div class="progress mb-3" style="height: 5px">
+                                                            <div class="progress-bar bg-warning" role="progressbar" style="width: 55%" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
+                                                        </div>
+                                                        <p>Backend API</p>
+                                                        <div class="progress" style="height: 5px">
+                                                            <div class="progress-bar bg-info" role="progressbar" style="width: 66%" aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="modal" style="display: none" role="dialog" id="modalSignIn">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content rounded-5 shadow">
+                                <div class="modal-header p-5 pb-4 border-bottom-0">
+                                    <!-- <h5 class="modal-title">Modal title</h5> -->
+                                    <h2 class="fw-bold mb-0">Sign in with Near</h2>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" id="btn-close_singin" aria-label="Close"></button>
+                                </div>
+
+                                <div class="modal-body p-5 pt-0">
+                                    <button class="w-100 mb-2 btn btn-lg rounded-4 btn-primary" id="sign_in_btn_modal" type="submit">Sign in with Near</button>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+    </main>
+    <footer class="text-muted py-5">
+        <div class="container">
+            <p class="float-end mb-1">
+                <a href="#">Back to top</a>
+            </p>
+            <p class="mb-1">SpaceWay Platform &copy; ISSET LLC 2022</p>
+
+        </div>
+    </footer>
     <script src="js/user_page.js"></script>
 
 </body>
+<!----------------------------------------TEMPLATES------------------------------------------------------------------->
+<template id="create_nft_template">
+    <div id="create_nft_div" class="div_create_nft">
+        <h3 id="nft_number">test</h3>
+        <div class="form-floating mb-3">
+            <input type="text" class="form-control rounded-4" name="nftName_create" id="nftName" placeholder="Example name">
+            <label for="nftName">Bonus Name</label>
+        </div>
+        <div class="mb-3">
+            <form enctype="multipart/form-data" method="post">
+                <label for="form_img_nft" class="form-label">NFT image</label>
+                <input class="form-control" name="img_nft_create" type="file" accept="image/png, image/gif, image/jpeg"  id="form_img_nft">
+            </form>
+        </div>
+        <div class="form-floating mb-3">
+            <textarea type="text" class="form-control rounded-4" name="short_info_nft_create" id="nftShortInfo" maxlength="500" placeholder="Short info" style="height:150px;"></textarea>
+            <label for="nftShortInfo">NFT Short info</label>
+        </div>
+        <label for="Near_NFT_price" class="form-label" >Amount on Near</label>
+        <div class="input-group mb-3">
+            <span class="input-group-text">$NEAR</span>
+            <input id="Near_NFT_price" name="nft_price_create" type="number" class="form-control rounded-4 nft_price_create" onkeyup="near_to_dollar" aria-label="Amount (on Near)">
+        </div>
+        <hr class="my-4">
+    </div>
+</template>
+
+<template id="img_form">
+    <input class="form-control" name="image" type="file" accept="image/png, image/gif, image/jpeg">
+</template>
 
 </html>

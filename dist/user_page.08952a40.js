@@ -52218,27 +52218,27 @@ function storeFiles(_x) {
 }
 
 function _storeFiles() {
-  _storeFiles = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(files) {
+  _storeFiles = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(files) {
     var client, cid;
-    return regeneratorRuntime.wrap(function _callee$(_context) {
+    return regeneratorRuntime.wrap(function _callee3$(_context3) {
       while (1) {
-        switch (_context.prev = _context.next) {
+        switch (_context3.prev = _context3.next) {
           case 0:
             client = makeStorageClient();
-            _context.next = 3;
+            _context3.next = 3;
             return client.put(files);
 
           case 3:
-            cid = _context.sent;
+            cid = _context3.sent;
             console.log('stored files with cid:', cid);
-            return _context.abrupt("return", cid);
+            return _context3.abrupt("return", cid);
 
           case 6:
           case "end":
-            return _context.stop();
+            return _context3.stop();
         }
       }
-    }, _callee);
+    }, _callee3);
   }));
   return _storeFiles.apply(this, arguments);
 }
@@ -52248,12 +52248,12 @@ function initContract() {
 }
 
 function _initContract() {
-  _initContract = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
-    return regeneratorRuntime.wrap(function _callee2$(_context2) {
+  _initContract = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4() {
+    return regeneratorRuntime.wrap(function _callee4$(_context4) {
       while (1) {
-        switch (_context2.prev = _context2.next) {
+        switch (_context4.prev = _context4.next) {
           case 0:
-            _context2.next = 2;
+            _context4.next = 2;
             return nearAPI.connect(Object.assign({
               deps: {
                 keyStore: new nearAPI.keyStores.BrowserLocalStorageKeyStore()
@@ -52261,7 +52261,7 @@ function _initContract() {
             }, nearConfig));
 
           case 2:
-            window.near = _context2.sent;
+            window.near = _context4.sent;
             // Initializing Wallet based Account. It can work with NEAR TestNet wallet that
             // is hosted at https://wallet.testnet.near.org
             window.walletAccount = new nearAPI.WalletAccount(window.near); // Getting the Account ID. If unauthorized yet, it's just empty string.
@@ -52272,18 +52272,18 @@ function _initContract() {
               // NOTE: This configuration only needed while NEAR is still in development
               // View methods are read only. They don't modify the state, but usually return some value.
               // Sender is the account ID to initialize transactions.
-              viewMethods: ["get_donations"],
+              viewMethods: ["get_donations", "is_register", "get_profile_full"],
               // Change methods can modify the state. But you don't receive the returned value when called.
-              changeMethods: ["add_donation", "donate"],
+              changeMethods: ["add_donation", "donate", "register"],
               sender: window.accountId
             });
 
           case 6:
           case "end":
-            return _context2.stop();
+            return _context4.stop();
         }
       }
-    }, _callee2);
+    }, _callee4);
   }));
   return _initContract.apply(this, arguments);
 }
@@ -52293,10 +52293,10 @@ function doWork() {
 }
 
 function _doWork() {
-  _doWork = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3() {
-    return regeneratorRuntime.wrap(function _callee3$(_context3) {
+  _doWork = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5() {
+    return regeneratorRuntime.wrap(function _callee5$(_context5) {
       while (1) {
-        switch (_context3.prev = _context3.next) {
+        switch (_context5.prev = _context5.next) {
           case 0:
             // Based on whether you've authorized, checking which flow we should go.
             if (!window.walletAccount.isSignedIn()) {
@@ -52305,15 +52305,15 @@ function _doWork() {
               signedInFlow();
             }
 
-            _context3.next = 3;
+            _context5.next = 3;
             return update_project_list();
 
           case 3:
           case "end":
-            return _context3.stop();
+            return _context5.stop();
         }
       }
-    }, _callee3);
+    }, _callee5);
   }));
   return _doWork.apply(this, arguments);
 }
@@ -52326,21 +52326,21 @@ function update_project_list() {
 }
 
 function _update_project_list() {
-  _update_project_list = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4() {
+  _update_project_list = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6() {
     var i, img_link, y, client, res, files, name;
-    return regeneratorRuntime.wrap(function _callee4$(_context4) {
+    return regeneratorRuntime.wrap(function _callee6$(_context6) {
       while (1) {
-        switch (_context4.prev = _context4.next) {
+        switch (_context6.prev = _context6.next) {
           case 0:
             projects_array = [];
-            _context4.next = 3;
+            _context6.next = 3;
             return get_projects();
 
           case 3:
-            projects_array = _context4.sent;
+            projects_array = _context6.sent;
 
             if (!(projects_array.length > 0)) {
-              _context4.next = 37;
+              _context6.next = 37;
               break;
             }
 
@@ -52351,12 +52351,12 @@ function _update_project_list() {
 
           case 9:
             if (!(i < projects_array.length)) {
-              _context4.next = 37;
+              _context6.next = 37;
               break;
             }
 
             if (!(projects_array[i].receiver == window.accountId)) {
-              _context4.next = 34;
+              _context6.next = 34;
               break;
             }
 
@@ -52365,39 +52365,39 @@ function _update_project_list() {
 
           case 13:
             if (!(y < projects_array[i].metadata.image.length)) {
-              _context4.next = 31;
+              _context6.next = 31;
               break;
             }
 
             client = makeStorageClient();
             console.log(projects_array[i].metadata.image[y]);
-            _context4.next = 18;
+            _context6.next = 18;
             return client.get(projects_array[i].metadata.image[y]);
 
           case 18:
-            res = _context4.sent;
+            res = _context6.sent;
             console.log("Got a response! [".concat(res.status, "] ").concat(res.statusText));
 
             if (res.ok) {
-              _context4.next = 22;
+              _context6.next = 22;
               break;
             }
 
             throw new Error("failed to get" + projects_array[i].metadata.image[y]);
 
           case 22:
-            _context4.next = 24;
+            _context6.next = 24;
             return res.files();
 
           case 24:
-            files = _context4.sent;
+            files = _context6.sent;
             console.log(files);
             name = files[0].name;
             img_link.push('https://' + projects_array[i].metadata.image[y] + '.ipfs.dweb.link/' + name);
 
           case 28:
             y++;
-            _context4.next = 13;
+            _context6.next = 13;
             break;
 
           case 31:
@@ -52407,15 +52407,15 @@ function _update_project_list() {
 
           case 34:
             i++;
-            _context4.next = 9;
+            _context6.next = 9;
             break;
 
           case 37:
           case "end":
-            return _context4.stop();
+            return _context6.stop();
         }
       }
-    }, _callee4);
+    }, _callee6);
   }));
   return _update_project_list.apply(this, arguments);
 }
@@ -52490,17 +52490,58 @@ var timerID = setInterval(function () {
 }, 60000);
 
 function signedInFlow() {
-  document.getElementById('sign-out').style.display = ' ';
-  document.getElementById('account_id').style.display = '';
-  document.getElementById('sign-in').style.display = 'none'; // Displaying current account name.
+  return _signedInFlow.apply(this, arguments);
+}
 
-  document.getElementById('account_id').innerText = window.accountId;
-  document.getElementById('sign-out').addEventListener('click', function (e) {
-    e.preventDefault();
-    walletAccount.signOut(); // Forcing redirect.
+function _signedInFlow() {
+  _signedInFlow = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7() {
+    var account_data;
+    return regeneratorRuntime.wrap(function _callee7$(_context7) {
+      while (1) {
+        switch (_context7.prev = _context7.next) {
+          case 0:
+            document.getElementById('sign-out').style.display = ' ';
+            document.getElementById('account_id').style.display = '';
+            document.getElementById('sign-in').style.display = 'none'; // Displaying current account name.
 
-    window.location.replace(window.location.origin + window.location.pathname);
-  });
+            document.getElementById('account_id').innerText = window.accountId;
+            document.getElementById('account').innerText = window.accountId;
+            _context7.next = 7;
+            return window.contract.get_profile_full({
+              "user": window.accountId
+            });
+
+          case 7:
+            account_data = _context7.sent;
+            document.getElementById('full_name').innerText = account_data.full_name;
+            document.getElementById('full_name2').innerText = account_data.full_name;
+            document.getElementById('country').innerText = account_data.country;
+            document.getElementById('website').innerText = account_data.website;
+            document.getElementById('github').innerText = account_data.github;
+            document.getElementById('twitter').innerText = account_data.twitter;
+            document.getElementById('instagramm').innerText = account_data.instagram;
+            document.getElementById('facebook').innerText = account_data.facebook;
+            document.getElementById('telegram').innerText = account_data.telegram;
+            document.getElementById('email').innerText = account_data.email;
+            document.getElementById('phone').innerText = account_data.phone;
+            document.getElementById('adress_f1').innerText = account_data.adress_f1;
+            document.getElementById('adress_f2').innerText = account_data.adress_f2;
+            document.getElementById('posstal_index').innerText = account_data.postal_index;
+            document.getElementById('sign-out').addEventListener('click', function (e) {
+              e.preventDefault();
+              walletAccount.signOut(); // Forcing redirect.
+
+              window.location.replace(window.location.origin + window.location.pathname);
+            });
+
+          case 23:
+          case "end":
+            return _context7.stop();
+        }
+      }
+    }, _callee7);
+  }));
+  return _signedInFlow.apply(this, arguments);
 }
 
 function signedOutFlow() {
@@ -52519,26 +52560,26 @@ function get_projects() {
 }
 
 function _get_projects() {
-  _get_projects = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5() {
+  _get_projects = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8() {
     var response;
-    return regeneratorRuntime.wrap(function _callee5$(_context5) {
+    return regeneratorRuntime.wrap(function _callee8$(_context8) {
       while (1) {
-        switch (_context5.prev = _context5.next) {
+        switch (_context8.prev = _context8.next) {
           case 0:
-            _context5.next = 2;
+            _context8.next = 2;
             return window.contract.get_donations();
 
           case 2:
-            response = _context5.sent;
+            response = _context8.sent;
             console.log(response);
-            return _context5.abrupt("return", response);
+            return _context8.abrupt("return", response);
 
           case 5:
           case "end":
-            return _context5.stop();
+            return _context8.stop();
         }
       }
-    }, _callee5);
+    }, _callee8);
   }));
   return _get_projects.apply(this, arguments);
 }
@@ -52548,6 +52589,144 @@ var editor = grapesjs.init({
   components: '<div class="txt-red">Hello world!</div>',
   style: '.txt-red{color: red}'
 });
+
+document.getElementById("create_project_modal").onclick = function () {
+  if (window.walletAccount.isSignedIn()) {
+    document.getElementById("create_pro").style.display = "block";
+    loadJSON("https://helper.testnet.near.org/fiat", NEAR_exchange, error);
+  } else {
+    document.getElementById("modalSignIn").style.display = "block";
+  }
+};
+
+document.getElementById("sign_in_btn_modal").onclick = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+  return regeneratorRuntime.wrap(function _callee$(_context) {
+    while (1) {
+      switch (_context.prev = _context.next) {
+        case 0:
+          _context.next = 2;
+          return window.walletAccount.requestSignIn(window.nearConfig.contractName);
+
+        case 2:
+          if (window.walletAccount.isSignedIn()) {
+            document.getElementById("modalSignin").style.display = "none";
+            document.getElementById("create_pro").style.display = "block";
+            loadJSON("https://helper.mainnet.near.org/fiat", NEAR_exchange, error);
+          }
+
+        case 3:
+        case "end":
+          return _context.stop();
+      }
+    }
+  }, _callee);
+}));
+
+document.getElementById("btn-close-pro-create").onclick = function () {
+  document.getElementById("create_pro").style.display = "none";
+};
+
+var img_number = 1;
+
+document.getElementById("add_img_btn").onclick = function () {
+  if ('content' in document.createElement('template')) {
+    img_number = img_number + 1; // Находим элемент tbody таблицы
+    // и шаблон строки
+
+    var input_place = document.getElementById("img_add");
+    var template = document.getElementById("img_form");
+    var clone = template.content.cloneNode(true);
+    document.getElementById("remove_img_btn").style.display = "block";
+    input_place.appendChild(clone);
+  }
+};
+
+document.getElementById("floatingShortInfo").onchange = function () {};
+
+document.getElementById("remove_img_btn").onclick = function () {
+  var div_list = document.getElementsByName("image");
+  var div_bonus_remove = div_list[div_list.length - 1];
+  div_bonus_remove.parentNode.removeChild(div_bonus_remove);
+  img_number = img_number - 1;
+
+  if (img_number === 1) {
+    document.getElementById("remove_img_btn").style.display = "none";
+  }
+};
+
+var bonus_number = 0;
+
+document.getElementById("add_nft_button").onclick = function () {
+  if ('content' in document.createElement('template')) {
+    bonus_number = bonus_number + 1; // Находим элемент tbody таблицы
+    // и шаблон строки
+
+    var input_place = document.getElementById("NFT_create_place");
+    var template = document.getElementById("create_nft_template");
+    var clone = template.content.cloneNode(true);
+    clone.getElementById("nft_number").innerText = "Bonus " + bonus_number;
+    document.getElementById("remove-nft_button").style.display = "block";
+    input_place.appendChild(clone);
+  }
+};
+
+document.getElementById("Near_amount").onkeyup = function () {
+  document.getElementById("dolar_amount").value = document.getElementById("Near_amount").value * NEAR_exchange_data.near.usd;
+};
+
+document.getElementById("dolar_amount").onkeyup = function () {
+  document.getElementById("Near_amount").value = document.getElementById("dolar_amount").value / NEAR_exchange_data.near.usd;
+};
+
+document.getElementById("remove-nft_button").onclick = function () {
+  var div_list = document.getElementsByClassName("div_create_nft");
+  var div_bonus_remove = div_list[div_list.length - 1];
+  div_bonus_remove.parentNode.removeChild(div_bonus_remove);
+  bonus_number = bonus_number - 1;
+
+  if (bonus_number === 0) {
+    document.getElementById("remove-nft_button").style.display = "none";
+  }
+};
+
+document.getElementById("profilebutton").onclick = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
+  return regeneratorRuntime.wrap(function _callee2$(_context2) {
+    while (1) {
+      switch (_context2.prev = _context2.next) {
+        case 0:
+          _context2.next = 2;
+          return window.contract.register({
+            "full_name": document.getElementById("full_name_input").value,
+            "email": document.getElementById("email_input").value,
+            "phone": document.getElementById("tel_input").value,
+            "adress_f1": document.getElementById("adress_f1_input").value,
+            "adress_f2": document.getElementById("adress_f2_input").value,
+            "country": document.getElementById("country_input").value,
+            "postal_index": document.getElementById("postal_input").value,
+            "web_site": document.getElementById("website_input").value,
+            "github": document.getElementById("github_input").value,
+            "twitter": document.getElementById("twitter_input").value,
+            "instagram": document.getElementById("instagramm_input").value,
+            "telegram": document.getElementById("telegram_input").value,
+            "facebook": document.getElementById("facebook_input").value
+          });
+
+        case 2:
+        case "end":
+          return _context2.stop();
+      }
+    }
+  }, _callee2);
+}));
+
+document.getElementById("edit_profile").onclick = function () {
+  document.getElementById("change_profile").style.display = "block";
+};
+
+document.getElementById("btn-close-profile").onclick = function () {
+  document.getElementById("change_profile").style.display = "none";
+};
+
 window.nearInitPromise = initContract().then(doWork).catch(console.error);
 },{"regenerator-runtime/runtime":"../node_modules/regenerator-runtime/runtime.js","near-api-js":"../node_modules/near-api-js/lib/browser-index.js","web3.storage/dist/bundle.esm.min.js":"../node_modules/web3.storage/dist/bundle.esm.min.js","browser-util-inspect":"../node_modules/browser-util-inspect/index.js","ipfs-http-client":"../node_modules/ipfs-http-client/cjs/src/index.js","near-api-js/lib/validators":"../node_modules/near-api-js/lib/validators.js","fs":"../node_modules/parcel-bundler/src/builtins/_empty.js","grapesjs":"../node_modules/grapesjs/dist/grapes.min.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
@@ -52577,7 +52756,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "39365" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "35089" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

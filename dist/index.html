@@ -298,43 +298,6 @@
             </div>
         </div>
 
-        <div class="modal" style="display: none" role="dialog" id="create_page">
-            <div class="modal-textedit" role="document">
-                <div class="modal-content rounded-5 shadow">
-                    <div class="modal-header p-5 pb-4 border-bottom-0">
-                        <!-- <h5 class="modal-title">Modal title</h5> -->
-                        <h2 class="fw-bold mb-0">Create your project page</h2>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" id="btn-close_createpage" aria-label="Close"></button>
-                    </div>
-
-                    <div class="modal-body p-5 pt-0">
-                        <label id="pro_name" style="display: none;"></label>
-                        <textarea id="project_page_create">Create project page</textarea>
-                        <script>tinymce.init({
-  selector: 'textarea#project_page_create',
-  plugins: 'a11ychecker advcode casechange export formatpainter image editimage linkchecker autolink lists checklist media mediaembed pageembed permanentpen powerpaste table advtable tableofcontents tinycomments tinymcespellchecker',
-  toolbar: 'a11ycheck addcomment showcomments casechange checklist code export formatpainter image editimage pageembed permanentpen table tableofcontents',
-  toolbar_mode: 'floating',
-  tinycomments_mode: 'embedded',
-  tinycomments_author: 'Author name'
-});
-
-function create_page() {
-  var content = tinyMCE.activeEditor.getContent();
-  var name = document.getElementById("pro_name").value;
-  fs.writeFile('projects_pages/' + name + '.html', content, function (error) {
-    /* handle error */
-  });
-  document.getElementById("create_page").style.display = "none";
-}</script>
-                        <button class="w-100 mb-2 btn btn-lg rounded-4 btn-primary" id="create_page_btn_modal" onclick="create_page()" type="submit">Create</button>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
     </main>
 
     <footer class="text-muted py-5">
@@ -342,7 +305,7 @@ function create_page() {
             <p class="float-end mb-1">
                 <a href="#">Back to top</a>
             </p>
-            <p class="mb-1">Album example is &copy; Bootstrap, but please download and customize it for yourself!</p>
+            <p class="mb-1">SpaceWay Platform &copy; ISSET LLC 2022</p>
 
         </div>
     </footer>

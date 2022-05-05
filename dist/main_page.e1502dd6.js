@@ -957,10 +957,6 @@ document.getElementById("btn-close_donateBox").onclick = function () {
   document.getElementById("donateBox").style.display = "none";
 };
 
-document.getElementById("btn-close_createpage").onclick = function () {
-  document.getElementById("create_page").style.display = "none";
-};
-
 var img_number = 1;
 
 document.getElementById("add_img_btn").onclick = function () {
@@ -1080,7 +1076,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "39365" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "35089" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

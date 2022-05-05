@@ -17408,10 +17408,6 @@ document.getElementById("btn-close_donateBox").onclick = function () {
   document.getElementById("donateBox").style.display = "none";
 };
 
-document.getElementById("btn-close_createpage").onclick = function () {
-  document.getElementById("create_page").style.display = "none";
-};
-
 var img_number = 1;
 
 document.getElementById("add_img_btn").onclick = function () {
@@ -52444,9 +52440,9 @@ function _initContract() {
               // NOTE: This configuration only needed while NEAR is still in development
               // View methods are read only. They don't modify the state, but usually return some value.
               // Sender is the account ID to initialize transactions.
-              viewMethods: ["get_donations"],
+              viewMethods: ["get_donations", "is_register", "get_profile_part"],
               // Change methods can modify the state. But you don't receive the returned value when called.
-              changeMethods: ["add_donation", "donate"],
+              changeMethods: ["add_donation", "donate", "register"],
               sender: window.accountId
             });
 
@@ -52755,17 +52751,67 @@ document.getElementById("donate-btn").onclick = /*#__PURE__*/_asyncToGenerator( 
 }));
 
 function signedInFlow() {
-  document.getElementById('sign-out').style.display = ' ';
-  document.getElementById('account_id').style.display = '';
-  document.getElementById('sign-in').style.display = 'none'; // Displaying current account name.
+  return _signedInFlow.apply(this, arguments);
+}
 
-  document.getElementById('account_id').innerText = window.accountId;
-  document.getElementById('sign-out').addEventListener('click', function (e) {
-    e.preventDefault();
-    walletAccount.signOut(); // Forcing redirect.
+function _signedInFlow() {
+  _signedInFlow = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8() {
+    var reg;
+    return regeneratorRuntime.wrap(function _callee8$(_context8) {
+      while (1) {
+        switch (_context8.prev = _context8.next) {
+          case 0:
+            document.getElementById('sign-out').style.display = ' ';
+            document.getElementById('account_id').style.display = '';
+            document.getElementById('sign-in').style.display = 'none';
+            document.getElementById('account_id').innerText = window.accountId;
+            _context8.next = 6;
+            return window.contract.is_register({
+              "user": window.accountId
+            });
 
-    window.location.replace(window.location.origin + window.location.pathname);
-  });
+          case 6:
+            reg = _context8.sent;
+
+            if (reg) {
+              _context8.next = 10;
+              break;
+            }
+
+            _context8.next = 10;
+            return window.contract.register({
+              "full_name": "",
+              "email": "",
+              "phone": "",
+              "adress_f1": "",
+              "adress_f2": "",
+              "country": "",
+              "postal_index": "",
+              "web_site": "",
+              "github": "",
+              "twitter": "",
+              "instagram": "",
+              "telegram": "",
+              "facebook": ""
+            });
+
+          case 10:
+            // Displaying current account name.
+            document.getElementById('sign-out').addEventListener('click', function (e) {
+              e.preventDefault();
+              walletAccount.signOut(); // Forcing redirect.
+
+              window.location.replace(window.location.origin + window.location.pathname);
+            });
+
+          case 11:
+          case "end":
+            return _context8.stop();
+        }
+      }
+    }, _callee8);
+  }));
+  return _signedInFlow.apply(this, arguments);
 }
 
 function signedOutFlow() {
@@ -52784,26 +52830,26 @@ function get_projects() {
 }
 
 function _get_projects() {
-  _get_projects = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8() {
+  _get_projects = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9() {
     var response;
-    return regeneratorRuntime.wrap(function _callee8$(_context8) {
+    return regeneratorRuntime.wrap(function _callee9$(_context9) {
       while (1) {
-        switch (_context8.prev = _context8.next) {
+        switch (_context9.prev = _context9.next) {
           case 0:
-            _context8.next = 2;
+            _context9.next = 2;
             return window.contract.get_donations();
 
           case 2:
-            response = _context8.sent;
+            response = _context9.sent;
             console.log(response);
-            return _context8.abrupt("return", response);
+            return _context9.abrupt("return", response);
 
           case 5:
           case "end":
-            return _context8.stop();
+            return _context9.stop();
         }
       }
-    }, _callee8);
+    }, _callee9);
   }));
   return _get_projects.apply(this, arguments);
 }
@@ -52815,11 +52861,11 @@ function add_donation(_x2, _x3, _x4, _x5, _x6, _x7) {
 }
 
 function _add_donation() {
-  _add_donation = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(amount, type_found, name, metadata, nft_data, nft_price) {
+  _add_donation = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(amount, type_found, name, metadata, nft_data, nft_price) {
     var account, balance;
-    return regeneratorRuntime.wrap(function _callee9$(_context9) {
+    return regeneratorRuntime.wrap(function _callee10$(_context10) {
       while (1) {
-        switch (_context9.prev = _context9.next) {
+        switch (_context10.prev = _context10.next) {
           case 0:
             console.log((0, _browserUtilInspect.default)({
               "amount": amount,
@@ -52832,27 +52878,27 @@ function _add_donation() {
             }));
 
             if (!document.getElementById("premium_check").checked) {
-              _context9.next = 15;
+              _context10.next = 15;
               break;
             }
 
-            _context9.next = 4;
+            _context10.next = 4;
             return window.walletAccount.account();
 
           case 4:
-            account = _context9.sent;
-            _context9.next = 7;
+            account = _context10.sent;
+            _context10.next = 7;
             return account.getAccountBalance();
 
           case 7:
-            balance = _context9.sent;
+            balance = _context10.sent;
 
             if (!(balance > premium_payment)) {
-              _context9.next = 13;
+              _context10.next = 13;
               break;
             }
 
-            _context9.next = 11;
+            _context10.next = 11;
             return window.contract.add_donation({
               "amount": amount,
               "receiver": window.accountId,
@@ -52864,15 +52910,15 @@ function _add_donation() {
             }, 300000000000000, premium_payment);
 
           case 11:
-            _context9.next = 13;
+            _context10.next = 13;
             break;
 
           case 13:
-            _context9.next = 17;
+            _context10.next = 17;
             break;
 
           case 15:
-            _context9.next = 17;
+            _context10.next = 17;
             return window.contract.add_donation({
               "amount": amount,
               "receiver": window.accountId,
@@ -52885,10 +52931,10 @@ function _add_donation() {
 
           case 17:
           case "end":
-            return _context9.stop();
+            return _context10.stop();
         }
       }
-    }, _callee9);
+    }, _callee10);
   }));
   return _add_donation.apply(this, arguments);
 }
@@ -53036,43 +53082,43 @@ function load_to_nft_storage(_x8) {
 }
 
 function _load_to_nft_storage() {
-  _load_to_nft_storage = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(image) {
+  _load_to_nft_storage = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11(image) {
     var img_array, i, img, cid;
-    return regeneratorRuntime.wrap(function _callee10$(_context10) {
+    return regeneratorRuntime.wrap(function _callee11$(_context11) {
       while (1) {
-        switch (_context10.prev = _context10.next) {
+        switch (_context11.prev = _context11.next) {
           case 0:
             img_array = [];
             i = 0;
 
           case 2:
             if (!(i < image.length)) {
-              _context10.next = 11;
+              _context11.next = 11;
               break;
             }
 
             img = image[i].files;
-            _context10.next = 6;
+            _context11.next = 6;
             return storeFiles(img);
 
           case 6:
-            cid = _context10.sent;
+            cid = _context11.sent;
             img_array.push(cid);
 
           case 8:
             i++;
-            _context10.next = 2;
+            _context11.next = 2;
             break;
 
           case 11:
-            return _context10.abrupt("return", img_array);
+            return _context11.abrupt("return", img_array);
 
           case 12:
           case "end":
-            return _context10.stop();
+            return _context11.stop();
         }
       }
-    }, _callee10);
+    }, _callee11);
   }));
   return _load_to_nft_storage.apply(this, arguments);
 }
@@ -53106,7 +53152,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "39365" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "35089" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

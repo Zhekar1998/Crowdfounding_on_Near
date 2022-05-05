@@ -2,6 +2,7 @@ use near_contract_standards::non_fungible_token::metadata::TokenMetadata;
 use near_sdk::{borsh};
 use near_sdk::borsh::BorshDeserialize;
 use near_sdk::borsh::BorshSerialize;
+use near_sdk::BorshStorageKey;
 use near_sdk::env;
 use near_sdk::ext_contract;
 use near_sdk::log;
@@ -10,6 +11,7 @@ use near_sdk::AccountId;
 use near_sdk::PanicOnDefault;
 use near_sdk::Promise;
 use near_sdk::collections::Vector;
+use near_sdk::collections::LookupMap;
 use serde_json::json;
 use near_sdk::serde::{Deserialize, Serialize};
 
@@ -47,6 +49,26 @@ pub struct DonationItem {
     active: bool
 }
 
+#[derive(
+    Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize, PanicOnDefault,
+)]
+#[serde(crate = "near_sdk::serde")]
+pub struct UserProfile{
+    full_name: String,
+    email: String,
+    phone: String,
+    adress_f1: String,
+    adress_f2: String,
+    country: String,
+    postal_index: String,
+    web_site: String,
+    github: String,
+    twitter: String,
+    instagram: String,
+    telegram: String,
+    facebook: String
+}    
+
 #[derive(Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Metadata {
@@ -83,10 +105,31 @@ pub struct DonationItemView {
 
 }
 #[derive(
+    Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize, PanicOnDefault,
+)]
+#[serde(crate = "near_sdk::serde")]
+pub struct UserProfileView{
+    full_name: String,
+    country: String,
+    web_site: String,
+    github: String,
+    twitter: String,
+    instagram: String,
+    telegram: String,
+    facebook: String
+}    
+#[derive(
 Debug, BorshDeserialize, BorshSerialize, PanicOnDefault,
 )]
 pub struct AssociationMember{
     account_id: String,
+}
+#[derive(
+    Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize, PanicOnDefault,
+)]
+#[serde(crate = "near_sdk::serde")]
+pub struct Isreg{
+    reg: bool
 }
 
 #[near_bindgen]
@@ -94,14 +137,20 @@ pub struct AssociationMember{
 
 pub struct Donation {
     donations: Vec<DonationItem>,
-    association: Vector<AssociationMember>
+    association: Vector<AssociationMember>,
+    users: LookupMap<String, UserProfile> 
+}
+#[derive(BorshSerialize, BorshStorageKey)]
+enum StorageKey {
+    Users,
+    Assotiation,
 }
 
 #[near_bindgen]
 impl Donation {
     #[init]
     pub fn new() -> Self {
-        let this = Self { donations: Vec::new(), association: Vector::new(b"a") };
+        let this = Self { donations: Vec::new(), association: Vector::new(StorageKey::Assotiation), users: LookupMap::new(StorageKey::Users)};
         this
     }
     #[payable]
@@ -209,6 +258,10 @@ impl Donation {
         true
     }
 
+    pub fn register(&mut self, user: UserProfile){
+        self.users.insert(&env::signer_account_id().to_string(), &user);
+    }
+
     pub fn get_donations(self) -> Vec<DonationItemView> {
         self.donations
             .iter()
@@ -225,4 +278,61 @@ impl Donation {
                 active: el.active})
             .collect()
     }
+
+    pub fn get_profile_full(self, user:String) -> UserProfile{
+        match self.users.get(&user){ 
+            Some(value) => {
+            value
+            },
+            None => UserProfile{
+                full_name: "".to_string(),
+                email: "".to_string(),
+                phone: "".to_string(),
+                adress_f1: "".to_string(),
+                adress_f2: "".to_string(),
+                country: "".to_string(),
+                postal_index: "".to_string(),
+                web_site: "".to_string(),
+                github: "".to_string(),
+                twitter: "".to_string(),
+                instagram: "".to_string(),
+                telegram: "".to_string(),
+                facebook: "".to_string()
+            }
+        }
+    }
+
+    pub fn get_profile_part(self, user:String) -> UserProfileView{
+        match self.users.get(&user){ 
+            Some(value) => UserProfileView{
+                full_name: value.full_name,
+                country: value.country,
+                web_site: value.web_site,
+                github: value.github,
+                twitter: value.twitter,
+                instagram: value.instagram,
+                telegram: value.telegram,
+                facebook: value.facebook
+            },
+            None => UserProfileView{
+                full_name: "".to_string(),
+                country: "".to_string(),
+                web_site: "".to_string(),
+                github: "".to_string(),
+                twitter: "".to_string(),
+                instagram: "".to_string(),
+                telegram: "".to_string(),
+                facebook: "".to_string()
+            }
+        }
+    }
+
+    pub fn is_register(self, user:String) -> Isreg{
+        match self.users.contains_key(&user){
+            value => Isreg{
+                reg: value
+            }
+        }
+    }
+
 }

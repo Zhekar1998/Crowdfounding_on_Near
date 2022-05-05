@@ -65,9 +65,7 @@ document.getElementById("btn-close_singin").onclick = function() {
 document.getElementById("btn-close_donateBox").onclick = function() {
     document.getElementById("donateBox").style.display = "none";
 }
-document.getElementById("btn-close_createpage").onclick = function() {
-    document.getElementById("create_page").style.display = "none";
-}
+
 
 var img_number = 1;
 document.getElementById("add_img_btn").onclick = function() {

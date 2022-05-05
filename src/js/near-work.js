@@ -51,9 +51,9 @@ async function initContract() {
         // View methods are read only. They don't modify the state, but usually return some value.
         // Sender is the account ID to initialize transactions.
 
-        viewMethods: ["get_donations"],
+        viewMethods: ["get_donations", "is_register", "get_profile_part"],
         // Change methods can modify the state. But you don't receive the returned value when called.
-        changeMethods: ["add_donation", "donate"],
+        changeMethods: ["add_donation", "donate", "register"],
         sender: window.accountId,
     });
 
@@ -218,14 +218,31 @@ document.getElementById("donate-btn").onclick = async function() {
 }
 
 
-function signedInFlow() {
+async function signedInFlow() {
 
     document.getElementById('sign-out').style.display = ' ';
     document.getElementById('account_id').style.display = '';
     document.getElementById('sign-in').style.display = 'none';
-
-    // Displaying current account name.
     document.getElementById('account_id').innerText = window.accountId;
+    let reg = await window.contract.is_register({ "user": window.accountId });
+    if (!reg) {
+        await window.contract.register({
+            "full_name": "",
+            "email": "",
+            "phone": "",
+            "adress_f1": "",
+            "adress_f2": "",
+            "country": "",
+            "postal_index": "",
+            "web_site": "",
+            "github": "",
+            "twitter": "",
+            "instagram": "",
+            "telegram": "",
+            "facebook": ""
+        });
+    }
+    // Displaying current account name.
     document.getElementById('sign-out').addEventListener('click', e => {
         e.preventDefault();
         walletAccount.signOut();
