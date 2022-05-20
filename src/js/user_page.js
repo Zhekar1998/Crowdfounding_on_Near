@@ -95,6 +95,7 @@ async function update_project_list() {
                 }
                 console.log('type_pro:');
                 console.log(projects_array[i].status);
+                document.getElementById("myprojects").innerHTML='<h4>'+projects_array[i].project_name+'</h4><p>ammount: '+projects_array[i].amount+', donated: '+projects_array[i].donated+'</p>'
                 project_list(i, projects_array[i].project_name, img_link, projects_array[i].metadata.short_info, projects_array[i].amount, projects_array[i].donated, projects_array[i].time_past, projects_array[i].status, projects_array[i].active, projects_array[i].receiver, projects_array[i].metadata.type_pro);
 
             }

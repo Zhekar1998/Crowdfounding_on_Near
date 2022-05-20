@@ -24,6 +24,7 @@ pub const CREATOR_ROYALTY: u128 = 1;
 pub const ROYALTY_ID: &str = "us_association.testnet";
 pub const ROYALTY: u128 = 4;
 pub const NFTCONTRACT: &str = "nft.crowndfound.testnet";
+pub const USN_CONTRACT:  &str = "usdn.testnet"
 #[ext_contract(ext_staking_pool)]
 pub trait ExtUser {
     fn send(&mut self, amount: u128);
@@ -46,7 +47,8 @@ pub struct DonationItem {
     nft_data: Vec<TokenMetadata>,
     nft_price: Vec<u128>,
     donate_base: Vec<DonateBase>,
-    active: bool
+    active: bool,
+    near: bool //true -- near, false -- USN
 }
 
 #[derive(
@@ -154,7 +156,7 @@ impl Donation {
         this
     }
     #[payable]
-    pub fn add_donation(&mut self, amount: u128, receiver: String, projectname: String, nftdata: Vec<TokenMetadata>, nftprice: Vec<u128>, type_found_param: bool, metadata_var: Metadata ) -> bool {
+    pub fn add_donation(&mut self, amount: u128, receiver: String, projectname: String, nftdata: Vec<TokenMetadata>, nftprice: Vec<u128>, type_found_param: bool, near: bool, metadata_var: Metadata ) -> bool {
         let status_var: u8;
         if env::attached_deposit()>=10u128.pow(24) {
             status_var = 2;
@@ -180,7 +182,8 @@ impl Donation {
             nft_data: nftdata,
             nft_price: nftprice,
             donate_base: Vec::new(),
-            active: true
+            active: true,
+            near: near
         });
         true
     }
@@ -198,6 +201,7 @@ impl Donation {
         
          self.donations.iter_mut().for_each(|el| {
             if el.receiver == receiver && el.project_name == projectname {
+                if el.near == true {
                 el.donated += env::attached_deposit();
                 log!(el.donated.to_string());
                 let mut i:i8 = -1;
@@ -216,17 +220,23 @@ impl Donation {
                         near_sdk::Gas(5_000_000_000_000));
                 }
 
-
+            }else{
+                Promise::new(AccountId::new_unchecked(String::from(USN_CONTRACT).clone())).function_call(
+                    "buy".to_string(),
+                    json!({"to": "crowfund.crowndfounding.testnet"}),
+                    env::attached_deposit(),
+                    near_sdk::Gas(5_000_000_000_000));
+                );//TODO add callback and ammount
+            }
 
                 el.donate_base.push(DonateBase{
                     donator_id:     env::signer_account_id(),
                     donate_near:    env::attached_deposit(),
-                })
+                });
             }
 
             if  !el.type_found {
                 if el.donated >= el.amount {
-                    Promise::new(AccountId::new_unchecked(String::from(ROYALTY_ID).clone())).transfer(el.donated*(ROYALTY));
                     Promise::new(AccountId::new_unchecked(String::from(CREATOR_ROYALTY_ID).clone())).transfer(el.donated*(CREATOR_ROYALTY));
                     Promise::new(AccountId::new_unchecked(el.receiver.clone())).transfer(el.donated*(100-ROYALTY-CREATOR_ROYALTY)/100);
                     el.active = false;
@@ -257,6 +267,8 @@ impl Donation {
 
         true
     }
+
+    //TODO FT payment
 
     pub fn register(&mut self, user: UserProfile){
         self.users.insert(&env::signer_account_id().to_string(), &user);

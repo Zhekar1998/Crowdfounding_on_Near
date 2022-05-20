@@ -274,7 +274,7 @@ async function get_projects() {
 
 
 var premium_payment = utils.format.parseNearAmount("20");
-async function add_donation(amount, type_found, name, metadata, nft_data, nft_price) {
+async function add_donation(amount, type_found, name, metadata, nft_data, nft_price, neart) {
     console.log(inspect({
         "amount": amount,
         "receiver": window.accountId,
@@ -298,6 +298,7 @@ async function add_donation(amount, type_found, name, metadata, nft_data, nft_pr
                     "nftdata": nft_data,
                     "nftprice": nft_price,
                     "type_found_param": type_found,
+                    "near": neart,
                     "metadata_var": metadata
 
 
@@ -316,6 +317,7 @@ async function add_donation(amount, type_found, name, metadata, nft_data, nft_pr
                 "nftdata": nft_data,
                 "nftprice": nft_price,
                 "type_found_param": type_found,
+                "near": neart,
                 "metadata_var": metadata
             }
 
@@ -324,7 +326,7 @@ async function add_donation(amount, type_found, name, metadata, nft_data, nft_pr
 
 }
 
-var type_found, name, short_info, image_array, video, type_pro, tags, nft_number;
+var type_found, name, short_info, image_array, video, type_pro, tags, nft_number, neart;
 var amount;
 var nft_image_array = [];
 
@@ -339,6 +341,11 @@ document.getElementById("create_btn").onclick = async() => {
         type_found = true;
     } else if (document.getElementById("inlineRadio2_2").checked) {
         type_found = false;
+    }
+    if (document.getElementById("inlineRadio3_1").checked) {
+        neart = true;
+    } else if (document.getElementById("inlineRadio3_2").checked) {
+        neart = false;
     }
     short_info = document.getElementById("floatingShortInfo").value;
 
@@ -416,7 +423,7 @@ document.getElementById("create_btn").onclick = async() => {
         const files = [new File([blob], name + '.json')];
         let file_cid = await storeFiles(files);*/
 
-    await add_donation(amount, type_found, name, pro_data_create, nft_data, nftPrice);
+    await add_donation(amount, type_found, name, pro_data_create, nft_data, nftPrice, neart);
     document.getElementById("create_pro").style.display = "none";
     document.getElementById("create_page").style.display = "block";
     document.getElementById("pro_name").innerHTML = name;
